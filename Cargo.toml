@@ -6,6 +6,7 @@ members = [
     "crates/mcpmux-gateway",
     "crates/mcpmux-mcp",
     "crates/mcpmux-storage",
+    "tests/rust",
 ]
 
 [workspace.package]

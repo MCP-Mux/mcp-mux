@@ -6,8 +6,17 @@
   "scripts": {
     "dev": "pnpm --filter @mcpmux/desktop dev",
     "build": "pnpm --filter @mcpmux/desktop build",
-    "test": "pnpm -r test",
-    "test:rust": "cargo test --workspace",
+    "test": "pnpm test:rust && pnpm test:ts",
+    "test:rust": "cargo nextest run --workspace",
+    "test:rust:unit": "cargo nextest run --workspace --lib",
+    "test:rust:int": "cargo nextest run -p tests",
+    "test:rust:doc": "cargo test --workspace --doc",
+    "test:ts": "vitest run -c tests/ts/vitest.config.ts",
+    "test:ts:watch": "vitest -c tests/ts/vitest.config.ts",
+    "test:e2e": "playwright test -c tests/e2e/playwright.config.ts",
+    "test:e2e:headed": "playwright test -c tests/e2e/playwright.config.ts --headed",
+    "test:ci": "pnpm test && pnpm test:e2e",
+    "test:coverage": "cargo llvm-cov --workspace --html && vitest run -c tests/ts/vitest.config.ts --coverage",
     "lint": "pnpm -r lint && cargo clippy --workspace -- -D warnings",
     "lint:fix": "pnpm -r lint:fix && cargo clippy --workspace --fix --allow-dirty",
     "format": "prettier --write . && cargo fmt --all",
@@ -16,9 +25,16 @@
     "clean": "pnpm -r clean && cargo clean"
   },
   "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.5.0",
+    "@vitest/coverage-v8": "^3.0.0",
+    "jsdom": "^25.0.0",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.9",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.0"
   },
   "engines": {
     "node": ">=20.0.0",
