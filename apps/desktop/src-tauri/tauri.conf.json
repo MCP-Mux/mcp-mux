@@ -15,6 +15,12 @@
       "desktop": {
         "schemes": ["mcpmux"]
       }
+    },
+    "updater": {
+      "endpoints": [
+        "https://github.com/MCP-Mux/mcp-mux/releases/latest/download/latest.json"
+      ],
+      "pubkey": ""
     }
   },
   "app": {
@@ -45,6 +51,43 @@
     ],
     "category": "DeveloperTool",
     "shortDescription": "Unified MCP Gateway & Manager",
-    "longDescription": "McpMux is a desktop application for managing Model Context Protocol (MCP) servers with spaces, credentials, and cloud sync."
+    "longDescription": "McpMux is a desktop application for managing Model Context Protocol (MCP) servers with spaces, credentials, and cloud sync.",
+    "publisher": "McpMux",
+    "copyright": "Copyright © 2024-2026 McpMux",
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": null,
+      "frameworks": [],
+      "minimumSystemVersion": "10.13",
+      "signingIdentity": null
+    },
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com",
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "headerImage": null,
+        "sidebarImage": null,
+        "installMode": "currentUser",
+        "languages": ["English"],
+        "displayLanguageSelector": false
+      }
+    },
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": false
+      },
+      "deb": {
+        "depends": [],
+        "desktopTemplate": "linux/mcpmux.desktop"
+      },
+      "rpm": {
+        "depends": []
+      }
+    }
   }
 }

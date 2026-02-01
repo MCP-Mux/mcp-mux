@@ -8,6 +8,7 @@
     "build": "pnpm --filter @mcpmux/desktop build",
     "changeset": "changeset",
     "version": "changeset version",
+    "release:key": "pnpm --filter @mcpmux/desktop tauri signer generate -w ~/.tauri/mcpmux.key",
     "test": "pnpm test:rust && pnpm test:ts",
     "test:rust": "cargo nextest run --workspace",
     "test:rust:unit": "cargo nextest run --workspace --lib",
