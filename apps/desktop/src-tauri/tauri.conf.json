@@ -82,11 +82,11 @@
         "bundleMediaFramework": false
       },
       "deb": {
-        "depends": [],
+        "depends": ["libsecret-1-0", "gnome-keyring", "librsvg2-2"],
         "desktopTemplate": "linux/mcpmux.desktop"
       },
       "rpm": {
-        "depends": []
+        "depends": ["libsecret", "gnome-keyring", "librsvg2"]
       }
     }
   }

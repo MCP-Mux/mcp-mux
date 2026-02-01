@@ -75,10 +75,9 @@ jobs:
 
       - name: Install Linux deps
         if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libsecret-1-dev
-          echo "PKG_CONFIG_PATH=$(pkg-config --variable pc_path pkg-config)" >> $GITHUB_ENV
+        uses: ./.github/actions/install-linux-deps
+        with:
+          verify_glib: 'false'
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -162,10 +161,9 @@ jobs:
 
       - name: Install Linux deps
         if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libsecret-1-dev
-          echo "PKG_CONFIG_PATH=$(pkg-config --variable pc_path pkg-config)" >> $GITHUB_ENV
+        uses: ./.github/actions/install-linux-deps
+        with:
+          verify_glib: 'false'
 
       - uses: dtolnay/rust-toolchain@stable
         with:

@@ -20,6 +20,9 @@
 - [Node.js](https://nodejs.org/) 18+
 - [pnpm](https://pnpm.io/) 9+
 
+**Linux system dependencies** (for credential storage via Secret Service):
+- `gnome-keyring` (or another `org.freedesktop.secrets` implementation like KWallet on KDE)
+
 ### Development
 
 ```bash

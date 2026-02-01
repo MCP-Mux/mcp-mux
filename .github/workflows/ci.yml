@@ -7,7 +7,6 @@ on:
     branches: [main]
 
 # Cancel in-progress runs when a new commit is pushed to the same PR.
-# PR: same group per PR so new push cancels previous run. Push to main: unique group so no cancel.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -31,15 +30,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Linux deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libsecret-1-dev
-          echo "=== Verifying glib-2.0 installation ==="
-          dpkg -l | grep libglib2.0-dev || echo "libglib2.0-dev not installed"
-          find /usr -name 'glib-2.0.pc' 2>/dev/null || echo "glib-2.0.pc not found"
-          pkg-config --modversion glib-2.0 || echo "pkg-config cannot find glib-2.0"
-          pkg-config --exists 'glib-2.0 >= 2.70' && echo "glib-2.0 >= 2.70 found" || (echo "ERROR: glib-2.0 >= 2.70 not found"; exit 1)
-          echo "PKG_CONFIG_PATH=$(pkg-config --variable pc_path pkg-config)" >> $GITHUB_ENV
+        uses: ./.github/actions/install-linux-deps
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -73,10 +64,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Linux deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libsecret-1-dev
-          echo "PKG_CONFIG_PATH=$(pkg-config --variable pc_path pkg-config)" >> $GITHUB_ENV
+        uses: ./.github/actions/install-linux-deps
+        with:
+          verify_glib: 'false'
 
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
@@ -112,15 +102,7 @@ jobs:
 
       - name: Install Linux deps
         if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libsecret-1-dev
-          echo "=== Verifying glib-2.0 installation ==="
-          dpkg -l | grep libglib2.0-dev || echo "libglib2.0-dev not installed"
-          find /usr -name 'glib-2.0.pc' 2>/dev/null || echo "glib-2.0.pc not found"
-          pkg-config --modversion glib-2.0 || echo "pkg-config cannot find glib-2.0"
-          pkg-config --exists 'glib-2.0 >= 2.70' && echo "glib-2.0 >= 2.70 found" || (echo "ERROR: glib-2.0 >= 2.70 not found"; exit 1)
-          echo "PKG_CONFIG_PATH=$(pkg-config --variable pc_path pkg-config)" >> $GITHUB_ENV
+        uses: ./.github/actions/install-linux-deps
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -168,15 +150,7 @@ jobs:
 
       - name: Install Linux deps
         if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libsecret-1-dev
-          echo "=== Verifying glib-2.0 installation ==="
-          dpkg -l | grep libglib2.0-dev || echo "libglib2.0-dev not installed"
-          find /usr -name 'glib-2.0.pc' 2>/dev/null || echo "glib-2.0.pc not found"
-          pkg-config --modversion glib-2.0 || echo "pkg-config cannot find glib-2.0"
-          pkg-config --exists 'glib-2.0 >= 2.70' && echo "glib-2.0 >= 2.70 found" || (echo "ERROR: glib-2.0 >= 2.70 not found"; exit 1)
-          echo "PKG_CONFIG_PATH=$(pkg-config --variable pc_path pkg-config)" >> $GITHUB_ENV
+        uses: ./.github/actions/install-linux-deps
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -243,80 +217,32 @@ jobs:
           retention-days: 7
 
   # ─────────────────────────────────────────────────────────────
-  # E2E Tests (Full Tauri with WebDriver - Linux/Windows only)
-  # macOS not supported: no WKWebView driver
-  # Only runs on main branch or when [e2e] in commit message
+  # E2E Desktop trigger check: main, [e2e] in commit, or /e2e-desktop comment on PR
   # ─────────────────────────────────────────────────────────────
-  e2e-tauri:
-    needs: [build]
-    # Run on main, or when explicitly requested with [e2e] tag
-    if: github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[e2e]')
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-          - os: windows-latest
-          # macOS NOT supported - no WKWebView driver
-
-    runs-on: ${{ matrix.os }}
+  e2e-trigger-check:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      contents: read
+    outputs:
+      run_e2e: ${{ steps.check.outputs.should_run }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Linux deps
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libsecret-1-dev webkit2gtk-driver xvfb
-          echo "=== Verifying glib-2.0 installation ==="
-          dpkg -l | grep libglib2.0-dev || echo "libglib2.0-dev not installed"
-          find /usr -name 'glib-2.0.pc' 2>/dev/null || echo "glib-2.0.pc not found"
-          pkg-config --modversion glib-2.0 || echo "pkg-config cannot find glib-2.0"
-          pkg-config --exists 'glib-2.0 >= 2.70' && echo "glib-2.0 >= 2.70 found" || (echo "ERROR: glib-2.0 >= 2.70 not found"; exit 1)
-          echo "PKG_CONFIG_PATH=$(pkg-config --variable pc_path pkg-config)" >> $GITHUB_ENV
-
-      - uses: dtolnay/rust-toolchain@stable
-        env:
-          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
-
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - name: Check if e2e-desktop should run
+        id: check
+        uses: ./.github/actions/check-comment-trigger
         with:
-          node-version: 20
-          cache: 'pnpm'
+          trigger: '/e2e-desktop'
+          check_main: 'true'
+          check_commit: 'true'
 
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: ${{ matrix.os }}-e2e
-        env:
-          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
-
-      # Cache tauri-driver binary
-      - name: Cache tauri-driver
-        uses: actions/cache@v4
-        id: tauri-driver-cache
-        with:
-          path: ~/.cargo/bin/tauri-driver*
-          key: tauri-driver-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Install tauri-driver
-        if: steps.tauri-driver-cache.outputs.cache-hit != 'true'
-        run: cargo install tauri-driver --locked
-        env:
-          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
-
-      - run: pnpm install --frozen-lockfile
-      
-      - name: Build app
-        run: pnpm build
-        env:
-          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-
-      - name: Run Tauri E2E tests (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: xvfb-run --auto-servernum pnpm test:e2e
-
-      - name: Run Tauri E2E tests (Windows)
-        if: matrix.os == 'windows-latest'
-        run: pnpm test:e2e
+  # ─────────────────────────────────────────────────────────────
+  # E2E Tests (Desktop app with WebDriver - Linux/Windows only)
+  # Runs when: main branch, [e2e] in commit, or /e2e-desktop comment on PR
+  # ─────────────────────────────────────────────────────────────
+  e2e-desktop:
+    needs: [build, e2e-trigger-check]
+    if: needs.e2e-trigger-check.outputs.run_e2e == 'true'
+    uses: ./.github/workflows/e2e-desktop.yml
+    with:
+      ref: ${{ github.event.pull_request.head.sha || github.sha }}
+    secrets: inherit

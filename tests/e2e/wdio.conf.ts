@@ -247,6 +247,12 @@ export const config: Options.Testrunner = {
 
   // Verify prerequisites before running
   onPrepare: async function () {
+    // Create output directories (gitignored; needed for CI and fresh clones)
+    const screenshotsDir = path.resolve('./tests/e2e/screenshots');
+    const videosDir = path.resolve('./tests/e2e/videos');
+    fs.mkdirSync(screenshotsDir, { recursive: true });
+    fs.mkdirSync(videosDir, { recursive: true });
+
     // Verify tauri-driver is installed
     const hasTauriDriver = checkTauriDriver();
     if (!hasTauriDriver) {

@@ -33,7 +33,8 @@ cargo install tauri-driver --locked
 # Add msedgedriver.exe to PATH
 
 # Linux: 
-sudo apt-get install webkit2gtk-driver
+sudo apt-get install webkit2gtk-driver gnome-keyring
+# gnome-keyring provides Secret Service API (org.freedesktop.secrets) for credential storage
 
 # macOS: NOT SUPPORTED (no WKWebView driver)
 ```
