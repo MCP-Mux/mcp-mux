@@ -66,7 +66,7 @@ if (-not $SkipTauriDriver) {
             Write-Host "  Edge version: $edgeVersion" -ForegroundColor Cyan
             
             # Download matching Edge WebDriver
-            $driverUrl = "https://msedgedriver.azureedge.net/$edgeVersion/edgedriver_win64.zip"
+            $driverUrl = "https://msedgewebdriverstorage.blob.core.windows.net/edgewebdriver/$edgeVersion/edgedriver_win64.zip"
             $driverZip = "$env:TEMP\edgedriver.zip"
             $driverDir = "$env:LOCALAPPDATA\EdgeDriver"
             
