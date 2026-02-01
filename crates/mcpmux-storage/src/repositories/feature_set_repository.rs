@@ -499,13 +499,16 @@ impl FeatureSetRepository for SqliteFeatureSetRepository {
 mod tests {
     use super::*;
 
+    /// Default space ID created by migration
+    const DEFAULT_SPACE_ID: &str = "00000000-0000-0000-0000-000000000001";
+
     #[tokio::test]
     async fn test_crud_operations() {
         let db = Arc::new(Mutex::new(Database::open_in_memory().unwrap()));
         let repo = SqliteFeatureSetRepository::new(db);
 
-        // Create
-        let fs = FeatureSet::new_custom("My Custom Set", "space_123")
+        // Create (use default space from migration)
+        let fs = FeatureSet::new_custom("My Custom Set", DEFAULT_SPACE_ID)
             .with_description("A custom feature set");
         repo.create(&fs).await.unwrap();
 
@@ -515,9 +518,9 @@ mod tests {
         let found = found.unwrap();
         assert_eq!(found.name, "My Custom Set");
 
-        // List by space
-        let all = repo.list_by_space("space_123").await.unwrap();
-        assert_eq!(all.len(), 1);
+        // List by space (migration creates 2 builtin + our 1 custom = 3)
+        let all = repo.list_by_space(DEFAULT_SPACE_ID).await.unwrap();
+        assert_eq!(all.len(), 3);
 
         // Delete
         repo.delete(&fs.id).await.unwrap();
@@ -530,18 +533,13 @@ mod tests {
         let db = Arc::new(Mutex::new(Database::open_in_memory().unwrap()));
         let repo = SqliteFeatureSetRepository::new(db);
 
-        // Create builtin feature sets
-        let all = FeatureSet::new_all("space_123");
-        let default = FeatureSet::new_default("space_123");
-        repo.create(&all).await.unwrap();
-        repo.create(&default).await.unwrap();
-
-        // List builtin
-        let builtin = repo.list_builtin("space_123").await.unwrap();
+        // Migration already creates builtin feature sets for default space
+        let builtin = repo.list_builtin(DEFAULT_SPACE_ID).await.unwrap();
         assert_eq!(builtin.len(), 2);
 
         // Cannot delete builtin
-        let result = repo.delete(&all.id).await;
+        let all_fs = builtin.iter().find(|f| f.feature_set_type == FeatureSetType::All).unwrap();
+        let result = repo.delete(&all_fs.id).await;
         assert!(result.is_err());
     }
 
@@ -550,9 +548,9 @@ mod tests {
         let db = Arc::new(Mutex::new(Database::open_in_memory().unwrap()));
         let repo = SqliteFeatureSetRepository::new(db);
 
-        // Ensure creates new
+        // Ensure creates new (use default space from migration)
         let fs = repo
-            .ensure_server_all("space_123", "github-mcp", "GitHub")
+            .ensure_server_all(DEFAULT_SPACE_ID, "github-mcp", "GitHub")
             .await
             .unwrap();
         assert_eq!(fs.feature_set_type, FeatureSetType::ServerAll);
@@ -560,7 +558,7 @@ mod tests {
 
         // Ensure returns existing
         let fs2 = repo
-            .ensure_server_all("space_123", "github-mcp", "GitHub")
+            .ensure_server_all(DEFAULT_SPACE_ID, "github-mcp", "GitHub")
             .await
             .unwrap();
         assert_eq!(fs.id, fs2.id);

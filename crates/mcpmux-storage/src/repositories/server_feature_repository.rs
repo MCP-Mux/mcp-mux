@@ -573,6 +573,9 @@ mod tests {
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
+    /// Default space ID created by migration
+    const DEFAULT_SPACE_ID: &str = "00000000-0000-0000-0000-000000000001";
+
     async fn setup_test_db() -> Arc<Mutex<Database>> {
         let db = Database::open_in_memory().expect("Failed to create in-memory database");
         Arc::new(Mutex::new(db))
@@ -583,10 +586,8 @@ mod tests {
         let db = setup_test_db().await;
         let repo = SqliteServerFeatureRepository::new(db);
 
-        // First, we need to create the space and server (would be done via fixtures normally)
-        // For this test, we'll just test the feature operations assuming FKs are disabled
-
-        let feature = ServerFeature::new_tool("space_default", "server1", "read_file")
+        // Use default space from migration (FK constraint enforced)
+        let feature = ServerFeature::new_tool(DEFAULT_SPACE_ID, "server1", "read_file")
             .with_display_name("Read File")
             .with_description("Reads a file from the filesystem");
 

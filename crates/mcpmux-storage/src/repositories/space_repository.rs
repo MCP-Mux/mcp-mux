@@ -254,10 +254,18 @@ impl SpaceRepository for SqliteSpaceRepository {
 mod tests {
     use super::*;
 
+    /// Default space ID created by migration
+    const DEFAULT_SPACE_ID: &str = "00000000-0000-0000-0000-000000000001";
+
     #[tokio::test]
     async fn test_crud_operations() {
         let db = Arc::new(Mutex::new(Database::open_in_memory().unwrap()));
         let repo = SqliteSpaceRepository::new(db);
+
+        // Migration creates default space, so we start with 1
+        let initial = repo.list().await.unwrap();
+        assert_eq!(initial.len(), 1);
+        assert_eq!(initial[0].name, "My Space");
 
         // Create
         let space = Space::new("Test Space").with_icon("🧪");
@@ -268,9 +276,9 @@ mod tests {
         assert!(found.is_some());
         assert_eq!(found.unwrap().name, "Test Space");
 
-        // List
+        // List (default + new = 2)
         let all = repo.list().await.unwrap();
-        assert_eq!(all.len(), 1);
+        assert_eq!(all.len(), 2);
 
         // Update
         let mut updated = space.clone();
@@ -291,22 +299,26 @@ mod tests {
         let db = Arc::new(Mutex::new(Database::open_in_memory().unwrap()));
         let repo = SqliteSpaceRepository::new(db);
 
-        // Create two spaces
-        let space1 = Space::new("Space 1").set_default();
-        let space2 = Space::new("Space 2");
-        repo.create(&space1).await.unwrap();
-        repo.create(&space2).await.unwrap();
-
-        // Check default
+        // Migration creates "My Space" as default
         let default = repo.get_default().await.unwrap();
         assert!(default.is_some());
-        assert_eq!(default.unwrap().name, "Space 1");
+        assert_eq!(default.unwrap().name, "My Space");
+
+        // Create a new space and set as default
+        let space2 = Space::new("Space 2");
+        repo.create(&space2).await.unwrap();
 
         // Change default
         repo.set_default(&space2.id).await.unwrap();
         let default = repo.get_default().await.unwrap();
         assert!(default.is_some());
         assert_eq!(default.unwrap().name, "Space 2");
+
+        // Change back to original
+        let default_uuid = Uuid::parse_str(DEFAULT_SPACE_ID).unwrap();
+        repo.set_default(&default_uuid).await.unwrap();
+        let default = repo.get_default().await.unwrap();
+        assert_eq!(default.unwrap().name, "My Space");
     }
 }
 

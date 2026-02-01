@@ -46,16 +46,16 @@ if (-not $ExePath) {
     $repoRoot = Split-Path -Parent $scriptDir
     
     # Check for debug build first, then release
-    $debugExe = Join-Path $repoRoot "target\debug\mcpmux-desktop.exe"
-    $releaseExe = Join-Path $repoRoot "target\release\mcpmux-desktop.exe"
+    $debugExe = Join-Path $repoRoot "target\debug\mcpmux.exe"
+    $releaseExe = Join-Path $repoRoot "target\release\mcpmux.exe"
     
     if (Test-Path $debugExe) {
         $ExePath = $debugExe
     } elseif (Test-Path $releaseExe) {
         $ExePath = $releaseExe
     } else {
-        Write-Host "✗ Could not find mcpmux-desktop.exe" -ForegroundColor Red
-        Write-Host "  Run 'cargo build -p mcpmux-desktop' first, or specify -ExePath" -ForegroundColor Yellow
+        Write-Host "✗ Could not find mcpmux.exe" -ForegroundColor Red
+        Write-Host "  Run 'cargo build -p mcpmux' first, or specify -ExePath" -ForegroundColor Yellow
         Write-Host ""
         Write-Host "  Usage:" -ForegroundColor Gray
         Write-Host "    .\register-deeplink.ps1              # Auto-find and register" -ForegroundColor White

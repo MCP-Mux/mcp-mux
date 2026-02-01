@@ -1,12 +1,12 @@
 [package]
-name = "mcpmux-desktop"
+name = "mcpmux"
 version.workspace = true
 edition.workspace = true
-description = "McpMux Desktop - Centralized MCP Server Management"
+description = "McpMux - Centralized MCP Server Management"
 authors = ["McpMux Team"]
 
 [lib]
-name = "mcpmux_desktop_lib"
+name = "mcpmux_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

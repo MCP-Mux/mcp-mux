@@ -1,7 +1,24 @@
+/**
+ * Playwright config for WEB-ONLY testing (no Tauri backend)
+ * 
+ * Use this for:
+ * - UI component testing
+ * - Layout/styling verification
+ * - Static page testing
+ * 
+ * NOT for:
+ * - Testing Tauri commands (use test:e2e with WebdriverIO)
+ * - Testing data from backend
+ * - Full integration testing
+ * 
+ * These tests mock Tauri IPC and only test the web layer.
+ */
+
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './specs',
+  testMatch: '**/*.spec.ts', // Only .spec.ts files (not .wdio.ts)
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

@@ -6,8 +6,8 @@ test.describe('FeatureSets Page', () => {
     const dashboard = new DashboardPage(page);
     await dashboard.navigate();
     
-    // Click FeatureSets in sidebar
-    await page.locator('nav button:has-text("FeatureSets")').click();
+    // Click FeatureSets in sidebar (force: true for Firefox compatibility)
+    await page.locator('nav button:has-text("FeatureSets")').click({ force: true });
     
     // Check heading (use first() to avoid multiple matches)
     await expect(page.getByRole('heading', { name: 'Feature Sets' }).first()).toBeVisible();
@@ -17,7 +17,7 @@ test.describe('FeatureSets Page', () => {
     const dashboard = new DashboardPage(page);
     await dashboard.navigate();
     
-    await page.locator('nav button:has-text("FeatureSets")').click();
+    await page.locator('nav button:has-text("FeatureSets")').click({ force: true });
     await expect(page.getByRole('heading', { name: 'Feature Sets' }).first()).toBeVisible();
     
     // Page should have content
@@ -30,7 +30,7 @@ test.describe('FeatureSets Page', () => {
     const dashboard = new DashboardPage(page);
     await dashboard.navigate();
     
-    await page.locator('nav button:has-text("FeatureSets")').click();
+    await page.locator('nav button:has-text("FeatureSets")').click({ force: true });
     
     // There are usually built-in feature sets like "All Features", "Default"
     const builtInSets = page.locator('text=/All Features|Default|Server:/i');
@@ -46,7 +46,7 @@ test.describe('FeatureSet Details', () => {
     const dashboard = new DashboardPage(page);
     await dashboard.navigate();
     
-    await page.locator('nav button:has-text("FeatureSets")').click();
+    await page.locator('nav button:has-text("FeatureSets")').click({ force: true });
     
     // Page should have elements
     const cards = page.locator('[class*="rounded"][class*="border"]');
@@ -61,7 +61,7 @@ test.describe('FeatureSet Details', () => {
     const dashboard = new DashboardPage(page);
     await dashboard.navigate();
     
-    await page.locator('nav button:has-text("FeatureSets")').click();
+    await page.locator('nav button:has-text("FeatureSets")').click({ force: true });
     
     // Server-specific sets show the server name
     const serverSets = page.locator('text=/Server:/i');

@@ -31,8 +31,10 @@ test.describe('Dashboard', () => {
     await expect(dashboard.configCopyButton).toBeVisible();
   });
 
-  test('should copy config to clipboard', async ({ page, context }) => {
-    // Grant clipboard permissions
+  test('should copy config to clipboard', async ({ page, context, browserName }) => {
+    // Clipboard permissions only work on Chromium
+    test.skip(browserName !== 'chromium', 'Clipboard permissions not supported');
+
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
     const dashboard = new DashboardPage(page);

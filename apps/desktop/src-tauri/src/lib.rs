@@ -88,7 +88,7 @@ fn init_tracing() -> tracing_appender::non_blocking::WorkerGuard {
                 .add_directive("mcpmux_gateway=debug".parse().unwrap())
                 .add_directive("mcpmux_storage=debug".parse().unwrap())
                 .add_directive("mcpmux_mcp=debug".parse().unwrap())
-                .add_directive("mcpmux_desktop_lib=debug".parse().unwrap())
+                .add_directive("mcpmux_lib=debug".parse().unwrap())
                 .add_directive("tauri=info".parse().unwrap())
                 .add_directive("tao=warn".parse().unwrap())
                 .add_directive("wry=warn".parse().unwrap())

@@ -406,6 +406,9 @@ impl InboundMcpClientRepository for SqliteInboundMcpClientRepository {
 mod tests {
     use super::*;
 
+    /// Default space ID created by migration
+    const DEFAULT_SPACE_ID: &str = "00000000-0000-0000-0000-000000000001";
+
     #[tokio::test]
     async fn test_crud_operations() {
         let db = Arc::new(Mutex::new(Database::open_in_memory().unwrap()));
@@ -450,9 +453,9 @@ mod tests {
         let found = repo.get(&client1.id).await.unwrap().unwrap();
         assert!(matches!(found.connection_mode, ConnectionMode::FollowActive));
 
-        // Create with Locked
+        // Create with Locked (use default space from migration for FK constraint)
         let mut client2 = Client::vscode();
-        let space_id = Uuid::new_v4();
+        let space_id = Uuid::parse_str(DEFAULT_SPACE_ID).unwrap();
         client2.connection_mode = ConnectionMode::Locked { space_id };
         repo.create(&client2).await.unwrap();
 

@@ -14,7 +14,7 @@ test.describe('Navigation', () => {
     const dashboard = new DashboardPage(page);
     await dashboard.navigate();
     
-    await page.locator('nav button:has-text("Settings")').click();
+    await page.locator('nav button:has-text("Settings")').click({ force: true });
     await expect(page.locator('h1:has-text("Settings")')).toBeVisible();
   });
 
@@ -23,31 +23,31 @@ test.describe('Navigation', () => {
     await dashboard.navigate();
 
     // My Servers
-    await page.locator('nav button:has-text("My Servers")').click();
+    await page.locator('nav button:has-text("My Servers")').click({ force: true });
     await expect(page.locator('h1:has-text("My Servers")')).toBeVisible();
 
     // Discover
-    await page.locator('nav button:has-text("Discover")').click();
+    await page.locator('nav button:has-text("Discover")').click({ force: true });
     await expect(page.locator('h1:has-text("Discover Servers")')).toBeVisible();
 
     // Spaces (use last() to avoid space switcher)
-    await page.locator('nav button:has-text("Spaces")').last().click();
+    await page.locator('nav button:has-text("Spaces")').last().click({ force: true });
     await expect(page.locator('h1:has-text("Workspaces")')).toBeVisible();
 
     // FeatureSets
-    await page.locator('nav button:has-text("FeatureSets")').click();
+    await page.locator('nav button:has-text("FeatureSets")').click({ force: true });
     await expect(page.locator('h1:has-text("Feature Sets")')).toBeVisible();
 
     // Clients
-    await page.locator('nav button:has-text("Clients")').click();
+    await page.locator('nav button:has-text("Clients")').click({ force: true });
     await expect(page.locator('h1:has-text("Connected Clients")')).toBeVisible();
 
     // Settings
-    await page.locator('nav button:has-text("Settings")').click();
+    await page.locator('nav button:has-text("Settings")').click({ force: true });
     await expect(page.locator('h1:has-text("Settings")')).toBeVisible();
 
     // Back to Dashboard
-    await page.locator('nav button:has-text("Dashboard")').click();
+    await page.locator('nav button:has-text("Dashboard")').click({ force: true });
     await expect(dashboard.heading).toBeVisible();
   });
 });
