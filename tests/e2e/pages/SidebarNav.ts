@@ -17,13 +17,14 @@ export class SidebarNav {
 
   constructor(page: Page) {
     this.page = page;
-    this.dashboard = page.getByRole('button', { name: 'Dashboard' });
-    this.myServers = page.getByRole('button', { name: 'My Servers' });
-    this.discover = page.getByRole('button', { name: 'Discover' });
-    this.spaces = page.getByRole('button', { name: 'Spaces' });
-    this.featureSets = page.getByRole('button', { name: 'FeatureSets' });
-    this.clients = page.getByRole('button', { name: 'Clients' });
-    this.settings = page.getByRole('button', { name: 'Settings' });
+    // Use exact matching and filter by text content in sidebar items
+    this.dashboard = page.getByRole('button', { name: 'Dashboard', exact: true });
+    this.myServers = page.getByRole('button', { name: 'My Servers', exact: true });
+    this.discover = page.getByRole('button', { name: 'Discover', exact: true });
+    this.spaces = page.getByRole('button', { name: 'Spaces', exact: true }).last();
+    this.featureSets = page.getByRole('button', { name: 'FeatureSets', exact: true });
+    this.clients = page.getByRole('button', { name: 'Clients', exact: true }).last();
+    this.settings = page.getByRole('button', { name: 'Settings', exact: true });
     this.spaceSwitcher = page.locator('[data-testid="space-switcher"]');
     this.themeToggle = page.locator('button[title*="mode"]');
   }

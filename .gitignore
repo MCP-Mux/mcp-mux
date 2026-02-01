@@ -52,6 +52,13 @@ gen/
 coverage/
 .nyc_output/
 
+# Test reports & assets
+test-results/
+playwright-report/
+blob-report/
+html-report/
+tests/e2e/reports/
+
 # Tauri
 apps/desktop/src-tauri/target/
 

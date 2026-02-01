@@ -12,7 +12,7 @@ export class SpacesPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.heading = page.getByRole('heading', { name: 'Spaces' });
+    this.heading = page.getByRole('heading', { name: 'Workspaces' });
     this.createSpaceButton = page.getByRole('button', { name: /Create|New Space/i });
     this.spaceList = page.locator('[data-testid="space-list"]');
     this.spaceCards = page.locator('[data-testid="space-card"]');

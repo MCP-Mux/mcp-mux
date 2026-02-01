@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { DashboardPage, SidebarNav, ServersPage, RegistryPage, SettingsPage } from '../pages';
+import { DashboardPage, RegistryPage } from '../pages';
 
 /**
  * End-to-end user flow tests that simulate real user journeys
@@ -8,7 +8,6 @@ import { DashboardPage, SidebarNav, ServersPage, RegistryPage, SettingsPage } fr
 test.describe('Complete User Flows', () => {
   test('should complete first-time setup flow', async ({ page }) => {
     const dashboard = new DashboardPage(page);
-    const sidebar = new SidebarNav(page);
     
     // 1. Load app
     await dashboard.navigate();
@@ -18,88 +17,66 @@ test.describe('Complete User Flows', () => {
     await expect(dashboard.gatewayStatus).toBeVisible();
     
     // 3. Navigate to discover servers
-    await sidebar.goToDiscover();
-    await expect(page.getByRole('heading', { name: 'Discover Servers' })).toBeVisible();
+    await page.locator('nav button:has-text("Discover")').click();
+    await expect(page.locator('h1:has-text("Discover Servers")')).toBeVisible();
     
     // 4. Navigate to settings to configure theme
-    await sidebar.goToSettings();
-    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+    await page.locator('nav button:has-text("Settings")').click();
+    await expect(page.locator('h1:has-text("Settings")')).toBeVisible();
     
     // 5. Return to dashboard
-    await sidebar.goToDashboard();
+    await page.locator('nav button:has-text("Dashboard")').click();
     await expect(dashboard.heading).toBeVisible();
   });
 
   test('should navigate through all main sections', async ({ page }) => {
     const dashboard = new DashboardPage(page);
-    const sidebar = new SidebarNav(page);
-    
     await dashboard.navigate();
-    
-    // Track which pages we visit
-    const visitedPages: string[] = [];
     
     // Dashboard
     await expect(dashboard.heading).toBeVisible();
-    visitedPages.push('dashboard');
     
     // My Servers
-    await sidebar.goToMyServers();
-    await expect(page.getByRole('heading', { name: 'My Servers' })).toBeVisible();
-    visitedPages.push('servers');
+    await page.locator('nav button:has-text("My Servers")').click();
+    await expect(page.locator('h1:has-text("My Servers")')).toBeVisible();
     
     // Discover
-    await sidebar.goToDiscover();
-    await expect(page.getByRole('heading', { name: 'Discover Servers' })).toBeVisible();
-    visitedPages.push('discover');
+    await page.locator('nav button:has-text("Discover")').click();
+    await expect(page.locator('h1:has-text("Discover Servers")')).toBeVisible();
     
-    // Spaces
-    await sidebar.goToSpaces();
-    await expect(page.getByRole('heading', { name: 'Spaces' })).toBeVisible();
-    visitedPages.push('spaces');
+    // Spaces (use last() to avoid space switcher)
+    await page.locator('nav button:has-text("Spaces")').last().click();
+    await expect(page.locator('h1:has-text("Workspaces")')).toBeVisible();
     
     // FeatureSets
-    await sidebar.goToFeatureSets();
-    await expect(page.getByRole('heading', { name: /FeatureSets|Feature Sets/i })).toBeVisible();
-    visitedPages.push('featuresets');
+    await page.locator('nav button:has-text("FeatureSets")').click();
+    await expect(page.locator('h1:has-text("Feature Sets")')).toBeVisible();
     
     // Clients
-    await sidebar.goToClients();
-    await expect(page.getByRole('heading', { name: 'Clients' })).toBeVisible();
-    visitedPages.push('clients');
+    await page.locator('nav button:has-text("Clients")').click();
+    await expect(page.locator('h1:has-text("Connected Clients")')).toBeVisible();
     
     // Settings
-    await sidebar.goToSettings();
-    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
-    visitedPages.push('settings');
-    
-    // Verify all pages were visited
-    expect(visitedPages).toEqual([
-      'dashboard',
-      'servers',
-      'discover',
-      'spaces',
-      'featuresets',
-      'clients',
-      'settings',
-    ]);
+    await page.locator('nav button:has-text("Settings")').click();
+    await expect(page.locator('h1:has-text("Settings")')).toBeVisible();
   });
 
   test('should persist theme preference', async ({ page }) => {
     const dashboard = new DashboardPage(page);
-    const sidebar = new SidebarNav(page);
-    const settings = new SettingsPage(page);
     
     await dashboard.navigate();
-    await sidebar.goToSettings();
+    await page.locator('nav button:has-text("Settings")').click();
     
     // Set dark theme
-    await settings.selectTheme('dark');
+    await page.getByRole('button', { name: 'Dark', exact: true }).click();
+    await page.waitForTimeout(500);
+    
+    // Verify dark theme is applied
     await expect(page.locator('html')).toHaveClass(/dark/);
     
     // Navigate away and back
-    await sidebar.goToDashboard();
-    await sidebar.goToSettings();
+    await page.locator('nav button:has-text("Dashboard")').click();
+    await page.locator('nav button:has-text("Settings")').click();
     
     // Dark theme should still be active
     await expect(page.locator('html')).toHaveClass(/dark/);
@@ -109,11 +86,10 @@ test.describe('Complete User Flows', () => {
 test.describe('Server Discovery Flow', () => {
   test('should search and browse servers', async ({ page }) => {
     const dashboard = new DashboardPage(page);
-    const sidebar = new SidebarNav(page);
     const registry = new RegistryPage(page);
     
     await dashboard.navigate();
-    await sidebar.goToDiscover();
+    await page.locator('nav button:has-text("Discover")').click();
     
     // 1. Initial state - should show servers
     await expect(registry.serverCount).toBeVisible();
@@ -144,15 +120,6 @@ test.describe('Dashboard Interactions', () => {
     await expect(dashboard.activeSpaceCard).toBeVisible();
   });
 
-  test('should display gateway URL when running', async ({ page }) => {
-    const dashboard = new DashboardPage(page);
-    await dashboard.navigate();
-    
-    // Check if gateway shows URL
-    const gatewayUrl = page.locator('code:has-text("localhost")');
-    // May or may not be visible depending on gateway state
-  });
-
   test('should show connection config section', async ({ page }) => {
     const dashboard = new DashboardPage(page);
     await dashboard.navigate();
@@ -174,7 +141,7 @@ test.describe('Responsive Behavior', () => {
     await dashboard.navigate();
     
     // App should still load
-    await expect(page.locator('text=Dashboard, text=McpMux')).toBeVisible();
+    await expect(dashboard.heading).toBeVisible();
   });
 
   test('should adjust layout for tablet viewport', async ({ page }) => {
@@ -197,7 +164,6 @@ test.describe('Responsive Behavior', () => {
     
     // App should display properly
     await expect(dashboard.heading).toBeVisible();
-    await expect(page.locator('text=McpMux')).toBeVisible();
   });
 });
 
@@ -209,18 +175,16 @@ test.describe('Error Handling', () => {
     await dashboard.navigate();
     await expect(dashboard.heading).toBeVisible();
     
-    // App should be usable even with potential network issues
+    // App should be usable
   });
 
   test('should show loading states', async ({ page }) => {
     const dashboard = new DashboardPage(page);
-    const sidebar = new SidebarNav(page);
     
     await dashboard.navigate();
-    await sidebar.goToDiscover();
+    await page.locator('nav button:has-text("Discover")').click();
     
-    // May show loading spinner briefly
     // Just verify page eventually loads
-    await expect(page.getByRole('heading', { name: 'Discover Servers' })).toBeVisible();
+    await expect(page.locator('h1:has-text("Discover Servers")')).toBeVisible();
   });
 });

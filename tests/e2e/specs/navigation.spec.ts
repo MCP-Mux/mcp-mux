@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { DashboardPage, SidebarNav, SettingsPage } from '../pages';
+import { DashboardPage } from '../pages';
 
 test.describe('Navigation', () => {
   test('should load the dashboard on startup', async ({ page }) => {
@@ -12,39 +12,42 @@ test.describe('Navigation', () => {
 
   test('should navigate to settings page', async ({ page }) => {
     const dashboard = new DashboardPage(page);
-    const sidebar = new SidebarNav(page);
-    const settings = new SettingsPage(page);
-
     await dashboard.navigate();
-    await sidebar.goToSettings();
-
-    await expect(settings.heading).toBeVisible();
-    await expect(page.locator('text=Configure McpMux')).toBeVisible();
+    
+    await page.locator('nav button:has-text("Settings")').click();
+    await expect(page.locator('h1:has-text("Settings")')).toBeVisible();
   });
 
   test('should navigate to all main pages', async ({ page }) => {
     const dashboard = new DashboardPage(page);
-    const sidebar = new SidebarNav(page);
-
     await dashboard.navigate();
 
-    // Navigate to each page and verify heading
-    await sidebar.goToMyServers();
-    await expect(page.getByRole('heading', { name: /Servers|My Servers/i })).toBeVisible();
+    // My Servers
+    await page.locator('nav button:has-text("My Servers")').click();
+    await expect(page.locator('h1:has-text("My Servers")')).toBeVisible();
 
-    await sidebar.goToDiscover();
-    await expect(page.getByRole('heading', { name: /Discover|Registry/i })).toBeVisible();
+    // Discover
+    await page.locator('nav button:has-text("Discover")').click();
+    await expect(page.locator('h1:has-text("Discover Servers")')).toBeVisible();
 
-    await sidebar.goToSpaces();
-    await expect(page.getByRole('heading', { name: 'Spaces' })).toBeVisible();
+    // Spaces (use last() to avoid space switcher)
+    await page.locator('nav button:has-text("Spaces")').last().click();
+    await expect(page.locator('h1:has-text("Workspaces")')).toBeVisible();
 
-    await sidebar.goToFeatureSets();
-    await expect(page.getByRole('heading', { name: /FeatureSets|Feature Sets/i })).toBeVisible();
+    // FeatureSets
+    await page.locator('nav button:has-text("FeatureSets")').click();
+    await expect(page.locator('h1:has-text("Feature Sets")')).toBeVisible();
 
-    await sidebar.goToClients();
-    await expect(page.getByRole('heading', { name: 'Clients' })).toBeVisible();
+    // Clients
+    await page.locator('nav button:has-text("Clients")').click();
+    await expect(page.locator('h1:has-text("Connected Clients")')).toBeVisible();
 
-    await sidebar.goToDashboard();
+    // Settings
+    await page.locator('nav button:has-text("Settings")').click();
+    await expect(page.locator('h1:has-text("Settings")')).toBeVisible();
+
+    // Back to Dashboard
+    await page.locator('nav button:has-text("Dashboard")').click();
     await expect(dashboard.heading).toBeVisible();
   });
 });

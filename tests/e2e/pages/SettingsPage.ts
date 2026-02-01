@@ -15,9 +15,9 @@ export class SettingsPage extends BasePage {
   constructor(page: Page) {
     super(page);
     this.heading = page.getByRole('heading', { name: 'Settings' });
-    this.lightThemeButton = page.getByRole('button', { name: 'Light' });
-    this.darkThemeButton = page.getByRole('button', { name: 'Dark' });
-    this.systemThemeButton = page.getByRole('button', { name: 'System' });
+    this.lightThemeButton = page.getByRole('button', { name: 'Light', exact: true });
+    this.darkThemeButton = page.getByRole('button', { name: 'Dark', exact: true });
+    this.systemThemeButton = page.getByRole('button', { name: 'System', exact: true });
     this.openLogsButton = page.getByRole('button', { name: /Open Logs/i });
     this.logsPath = page.locator('.font-mono').filter({ hasText: /logs|mcpmux/i });
   }
