@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@mcpmux/ui';
 import type { FeatureSet, AddMemberInput } from '@/lib/api/featureSets';
-import { setFeatureSetMembers, updateFeatureSet } from '@/lib/api/featureSets';
+import { setFeatureSetMembers } from '@/lib/api/featureSets';
 import type { ServerFeature } from '@/lib/api/serverFeatures';
 import { listServerFeatures } from '@/lib/api/serverFeatures';
 
@@ -48,11 +48,10 @@ export function FeatureSetPanel({ featureSet, spaceId, onClose, onDelete, onUpda
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
-  
-  // Edit state for custom sets
-  const [editName, setEditName] = useState(featureSet.name);
-  const [editDescription, setEditDescription] = useState(featureSet.description || '');
-  const [editIcon, setEditIcon] = useState(featureSet.icon || '');
+  // Edit state for custom sets (setters reserved for future metadata edit UI)
+  const [editName, _setEditName] = useState(featureSet.name);
+  const [editDescription, _setEditDescription] = useState(featureSet.description || '');
+  const [editIcon, _setEditIcon] = useState(featureSet.icon || '');
 
   // Collapsible sections - only one expanded at a time, features by default
   const [expandedSections, setExpandedSections] = useState({

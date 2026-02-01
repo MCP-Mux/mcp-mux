@@ -32,7 +32,22 @@ describe('Space Management - Default Space', () => {
 
 describe('Space Management - Create and Delete', () => {
   const createdSpaceName = 'Test Space E2E';
-  
+
+  /** Dismiss create-space modal if open (e.g. from failed previous test) */
+  async function dismissCreateModalIfOpen() {
+    const overlay = await $('[data-testid="create-space-modal-overlay"]');
+    if (await overlay.isDisplayed().catch(() => false)) {
+      const cancelBtn = await byTestId('create-space-cancel-btn');
+      if (await cancelBtn.isDisplayed().catch(() => false)) {
+        await cancelBtn.click();
+        await browser.pause(500);
+      } else {
+        await browser.keys('Escape');
+        await browser.pause(500);
+      }
+    }
+  }
+
   it('TC-SP-002: Create a new space', async () => {
     const spacesButton = await byTestId('nav-spaces');
     await spacesButton.click();
@@ -59,12 +74,13 @@ describe('Space Management - Create and Delete', () => {
         await browser.saveScreenshot('./tests/e2e/screenshots/sp-02b-name-entered.png');
         
         // Click Create Space submit button
-        const submitButton = await findElement('create-space-submit-btn', 'button=Create Space');
+        const submitButton = await byTestId('create-space-submit-btn');
         const isSubmitDisplayed = await submitButton.isDisplayed().catch(() => false);
         
         console.log('[DEBUG] Submit button displayed:', isSubmitDisplayed);
         
         if (isSubmitDisplayed) {
+          await submitButton.waitForClickable({ timeout: 5000 });
           await submitButton.click();
           await browser.pause(2000);
         }
@@ -87,7 +103,7 @@ describe('Space Management - Create and Delete', () => {
   });
 
   it('TC-SP-003: Set a space as active', async () => {
-    // Look for Set Active button - try test ID first
+    await dismissCreateModalIfOpen();
     const setActiveButtons = await $$('[data-testid^="set-active-space-"]');
     
     if (setActiveButtons.length > 0) {
@@ -111,6 +127,7 @@ describe('Space Management - Create and Delete', () => {
   });
 
   it('TC-SP-011: Verify spaces are listed on page', async () => {
+    await dismissCreateModalIfOpen();
     const spacesButton = await byTestId('nav-spaces');
     await spacesButton.click();
     await browser.pause(2000);
@@ -128,7 +145,7 @@ describe('Space Management - Create and Delete', () => {
   });
 
   it('TC-SP-005: Cleanup - Delete test space if exists', async () => {
-    // Look for delete button - try test ID first
+    await dismissCreateModalIfOpen();
     const deleteButtons = await $$('[data-testid^="delete-space-"]');
     
     await browser.saveScreenshot('./tests/e2e/screenshots/sp-07-before-delete.png');

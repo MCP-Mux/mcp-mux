@@ -19,16 +19,17 @@ import {
   FileJson,
 } from 'lucide-react';
 import { ServerActionMenu } from './ServerActionMenu';
-import type { ServerViewModel, ServerDefinition, InstalledServerState } from '../../types/registry';
+import type { ServerViewModel, ServerDefinition, InstalledServerState, InputDefinition } from '../../types/registry';
 import type { ServerFeature } from '@/lib/api/serverFeatures';
 import { listServerFeaturesByServer } from '@/lib/api/serverFeatures';
+import type { ConnectionStatus } from '@/lib/api/serverManager';
 import { useViewSpace } from '@/stores';
 import { useServerManager } from '@/hooks/useServerManager';
-import type { ConnectionStatus } from '@/lib/api/serverManager';
+import { useGatewayEvents, useDomainEvents } from '@/hooks/useDomainEvents';
+import type { GatewayChangedPayload, ServerChangedPayload } from '@/hooks/useDomainEvents';
+import type { FeaturesUpdatedEvent } from '@/lib/api/serverManager';
 import { ServerLogViewer } from '@/components/ServerLogViewer';
 import { ConfigEditorModal } from '@/components/ConfigEditorModal';
-import { useGatewayEvents, useDomainEvents } from '@/hooks/useDomainEvents';
-import { discoverServers, listInstalledServers } from '@/lib/api/registry';
 import { SourceBadge } from '@/components/SourceBadge';
 
 // Helper to merge definitions with states (same as registryStore)
@@ -44,7 +45,7 @@ function mergeDefinitionsWithStates(
     // Check if any required inputs are missing
     const inputs = def.transport.metadata?.inputs ?? [];
     const inputValues = state?.input_values ?? {};
-    const missing_required_inputs = inputs.some((input: any) => 
+    const missing_required_inputs = inputs.some((input: InputDefinition) =>
       input.required && !inputValues[input.id]
     );
     
@@ -178,7 +179,7 @@ export function ServersPage() {
     retry: retryConnectionV2,
   } = useServerManager({
     spaceId: viewSpace?.id || '',
-    onFeaturesChange: (event) => {
+    onFeaturesChange: (event: FeaturesUpdatedEvent) => {
       // Update features when they change
       console.log('[ServersPage] Features updated:', event);
       
@@ -234,7 +235,7 @@ export function ServersPage() {
   }, [viewSpace?.id]);
 
   // Subscribe to gateway events for reactive updates (no polling!)
-  useGatewayEvents((payload) => {
+  useGatewayEvents((payload: GatewayChangedPayload) => {
     if (payload.action === 'started') {
       setGatewayRunning(true);
       setGatewayUrl(payload.url || null);
@@ -248,7 +249,7 @@ export function ServersPage() {
   // Subscribe to server lifecycle events (install/uninstall)
   const { subscribe } = useDomainEvents();
   useEffect(() => {
-    return subscribe('server-changed', (payload) => {
+    return subscribe('server-changed', (payload: ServerChangedPayload) => {
       if (!viewSpace || payload.space_id !== viewSpace.id) {
         return;
       }
@@ -306,8 +307,8 @@ export function ServersPage() {
       
       // Sort by installation time (newest first)
       mergedServers.sort((a, b) => {
-        const dateA = new Date((a as any).created_at || 0).getTime();
-        const dateB = new Date((b as any).created_at || 0).getTime();
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
         return dateB - dateA;
       });
       
@@ -466,10 +467,10 @@ export function ServersPage() {
   const handleEnableClick = async (server: ServerViewModel) => {
     const serverInputs = server.transport.metadata?.inputs ?? [];
     // If server has required inputs that are missing, show config modal
-    if (serverInputs.some((i: any) => i.required) && server.missing_required_inputs) {
+    if (serverInputs.some((i: InputDefinition) => i.required) && server.missing_required_inputs) {
       // Initialize with existing values
       const initialValues: Record<string, string> = {};
-      serverInputs.forEach((input: any) => {
+      serverInputs.forEach((input: InputDefinition) => {
         initialValues[input.id] = server.input_values[input.id] || '';
       });
       setConfigModal({
@@ -530,7 +531,7 @@ export function ServersPage() {
   const handleConfigureClick = (server: ServerViewModel) => {
     const serverInputs = server.transport.metadata?.inputs ?? [];
     const initialValues: Record<string, string> = {};
-    serverInputs.forEach((input: any) => {
+    serverInputs.forEach((input: InputDefinition) => {
       initialValues[input.id] = server.input_values[input.id] || '';
     });
     setConfigModal({
@@ -641,7 +642,7 @@ export function ServersPage() {
     
     setActionLoading(`uninstall-${server.id}`);
     try {
-      const { uninstallServer, refreshRegistry } = await import('@/lib/api/registry');
+      const { uninstallServer } = await import('@/lib/api/registry');
       const { disconnectServer } = await import('@/lib/api/gateway');
       
       if (gatewayRunning && server.enabled && viewSpace) {
@@ -1202,7 +1203,7 @@ export function ServersPage() {
             </p>
             
             <div className="space-y-4">
-              {(configModal.server.transport.metadata?.inputs ?? []).map((input: any) => {
+              {(configModal.server.transport.metadata?.inputs ?? []).map((input: InputDefinition) => {
                 const obtainUrl = input.obtain_url || input.obtain?.url;
                 const obtainInstructions = input.obtain_instructions || input.obtain?.instructions;
                 const inputType = input.type || 'text';
@@ -1313,7 +1314,7 @@ export function ServersPage() {
                   onClick={handleSaveConfig}
                   disabled={
                     (configModal.server.transport.metadata?.inputs ?? [])
-                      .some((i: any) => i.required && !configModal.inputValues[i.id])
+                      .some((i: InputDefinition) => i.required && !configModal.inputValues[i.id])
                   }
                   className="px-4 py-2 text-sm rounded-lg bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] hover:bg-[rgb(var(--primary-hover))] disabled:opacity-50 transition-colors"
                   data-testid="config-save-btn"
