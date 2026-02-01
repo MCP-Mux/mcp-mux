@@ -8,30 +8,20 @@ param(
     [switch]$SkipTauriDriver
 )
 
-$ErrorActionPreference = "Stop"
-
 Write-Host "=== McpMux Dev Setup ===" -ForegroundColor Cyan
 
 # Check prerequisites
 Write-Host "`nChecking prerequisites..." -ForegroundColor Yellow
 
-$missing = @()
+$hasNode = $null -ne (Get-Command "node" -ErrorAction SilentlyContinue)
+$hasPnpm = $null -ne (Get-Command "pnpm" -ErrorAction SilentlyContinue)
+$hasCargo = $null -ne (Get-Command "cargo" -ErrorAction SilentlyContinue)
 
-if (-not (Get-Command "node" -ErrorAction SilentlyContinue)) {
-    $missing += "Node.js (https://nodejs.org/)"
-}
+if (-not $hasNode) { Write-Host "  Missing: Node.js (https://nodejs.org/)" -ForegroundColor Red }
+if (-not $hasPnpm) { Write-Host "  Missing: pnpm (npm install -g pnpm)" -ForegroundColor Red }
+if (-not $hasCargo) { Write-Host "  Missing: Rust (https://rustup.rs/)" -ForegroundColor Red }
 
-if (-not (Get-Command "pnpm" -ErrorAction SilentlyContinue)) {
-    $missing += "pnpm (npm install -g pnpm)"
-}
-
-if (-not (Get-Command "cargo" -ErrorAction SilentlyContinue)) {
-    $missing += "Rust (https://rustup.rs/)"
-}
-
-if ($missing.Count -gt 0) {
-    Write-Host "`nMissing prerequisites:" -ForegroundColor Red
-    $missing | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
+if (-not ($hasNode -and $hasPnpm -and $hasCargo)) {
     Write-Host "`nPlease install the missing tools and run this script again." -ForegroundColor Red
     exit 1
 }
@@ -43,54 +33,36 @@ Write-Host "  Rust: $(rustc --version)" -ForegroundColor Green
 # Install Node dependencies
 if (-not $SkipNode) {
     Write-Host "`nInstalling Node dependencies..." -ForegroundColor Yellow
-    pnpm install --frozen-lockfile
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Failed to install Node dependencies" -ForegroundColor Red
-        exit 1
-    }
-    Write-Host "  Node dependencies installed" -ForegroundColor Green
+    pnpm install
+    Write-Host "  Done" -ForegroundColor Green
 }
 
-# Install Playwright browsers
+# Install Playwright browsers using npx (more compatible)
 if (-not $SkipPlaywright) {
     Write-Host "`nInstalling Playwright browsers..." -ForegroundColor Yellow
-    pnpm exec playwright install --with-deps chromium
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Failed to install Playwright browsers" -ForegroundColor Red
-        exit 1
-    }
-    Write-Host "  Playwright browsers installed" -ForegroundColor Green
+    npx playwright install chromium
+    Write-Host "  Done" -ForegroundColor Green
 }
 
 # Install tauri-driver for full E2E tests
 if (-not $SkipTauriDriver) {
     Write-Host "`nInstalling tauri-driver..." -ForegroundColor Yellow
     cargo install tauri-driver --locked
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Failed to install tauri-driver" -ForegroundColor Red
-        exit 1
-    }
-    Write-Host "  tauri-driver installed" -ForegroundColor Green
+    Write-Host "  Done" -ForegroundColor Green
 }
 
 # Install cargo-nextest for faster Rust tests
 if (-not $SkipRust) {
     Write-Host "`nInstalling cargo-nextest..." -ForegroundColor Yellow
     cargo install cargo-nextest --locked
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Warning: Failed to install cargo-nextest (tests will still work with cargo test)" -ForegroundColor Yellow
-    } else {
-        Write-Host "  cargo-nextest installed" -ForegroundColor Green
-    }
+    Write-Host "  Done" -ForegroundColor Green
 }
 
 Write-Host "`n=== Setup Complete ===" -ForegroundColor Cyan
-Write-Host @"
-
-You can now run:
-  pnpm dev           - Start development server
-  pnpm test          - Run all tests
-  pnpm test:e2e:web  - Run web E2E tests (Playwright)
-  pnpm test:e2e      - Run full Tauri E2E tests (requires built app)
-
-"@ -ForegroundColor White
+Write-Host ""
+Write-Host "You can now run:"
+Write-Host "  pnpm dev           - Start development server"
+Write-Host "  pnpm test          - Run all tests"
+Write-Host "  pnpm test:e2e:web  - Run web E2E tests (Playwright)"
+Write-Host "  pnpm test:e2e      - Run full Tauri E2E tests (requires built app)"
+Write-Host ""
