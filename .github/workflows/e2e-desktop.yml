@@ -1,0 +1,84 @@
+# Reusable workflow: Desktop E2E tests (Linux + Windows)
+# Call with workflow_call from ci.yml or e2e-desktop-comment.yml
+name: E2E Desktop
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to checkout (e.g. PR head SHA or github.sha)
+        required: true
+        type: string
+    secrets:
+      TAURI_SIGNING_PRIVATE_KEY:
+        required: false
+
+env:
+  PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
+
+jobs:
+  e2e-desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: windows-latest
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Install Linux deps
+        if: matrix.os == 'ubuntu-latest'
+        uses: ./.github/actions/install-linux-deps
+        with:
+          e2e: 'true'
+
+      - uses: dtolnay/rust-toolchain@stable
+        env:
+          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.os }}-e2e-desktop
+        env:
+          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Cache tauri-driver
+        uses: actions/cache@v4
+        id: tauri-driver-cache
+        with:
+          path: ~/.cargo/bin/tauri-driver*
+          key: tauri-driver-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install tauri-driver
+        if: steps.tauri-driver-cache.outputs.cache-hit != 'true'
+        run: cargo install tauri-driver --locked
+        env:
+          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build app
+        run: pnpm build
+        env:
+          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+
+      - name: Run desktop E2E tests (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          dbus-run-session -- bash -c 'gnome-keyring-daemon --unlock < /dev/null; sleep 2; xvfb-run --auto-servernum pnpm test:e2e'
+
+      - name: Run desktop E2E tests (Windows)
+        if: matrix.os == 'windows-latest'
+        run: pnpm test:e2e

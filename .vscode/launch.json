@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "attach",
+            "name": "Attach to McpMux Desktop",
+            "program": "${workspaceFolder}/target/debug/mcpmux.exe",
+            "pid": "${command:pickProcess}",
+            "waitFor": true
+        }
+    ]
+}
+

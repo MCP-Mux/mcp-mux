@@ -1,0 +1,18 @@
+# cargo-nextest configuration
+# https://nexte.st/docs/configuration/
+
+[profile.default]
+retries = 2
+slow-timeout = "60s"
+status-level = "pass"
+final-status-level = "flaky"
+
+[profile.ci]
+fail-fast = false
+retries = 3
+status-level = "retry"
+final-status-level = "slow"
+
+[profile.ci.junit]
+path = "junit.xml"
+report-name = "mcpmux-tests"

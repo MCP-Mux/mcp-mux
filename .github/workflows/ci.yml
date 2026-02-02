@@ -1,0 +1,248 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs when a new commit is pushed to the same PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  # Cache keys for better hit rates
+  RUST_CACHE_KEY: v1
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
+  # Linux: pkg-config must find glib-2.0.pc (set before any cargo step; only used on Linux)
+  PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # Rust Checks (fast, single platform)
+  # ─────────────────────────────────────────────────────────────
+  rust-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux deps
+        uses: ./.github/actions/install-linux-deps
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+        env:
+          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
+
+      - uses: Swatinem/rust-cache@v2
+        env:
+          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
+
+      - name: Format check
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        run: cargo clippy --workspace -- -D warnings
+        env:
+          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
+
+      - name: Check (no features)
+        run: cargo check --workspace
+        env:
+          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
+
+  # ─────────────────────────────────────────────────────────────
+  # TypeScript Checks (fast)
+  # ─────────────────────────────────────────────────────────────
+  ts-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux deps
+        uses: ./.github/actions/install-linux-deps
+        with:
+          verify_glib: 'false'
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - name: TypeScript tests
+        run: pnpm test:ts
+
+  # ─────────────────────────────────────────────────────────────
+  # Rust Tests (cross-platform matrix)
+  # ─────────────────────────────────────────────────────────────
+  rust-test:
+    needs: rust-check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: macos-latest
+            target: aarch64-apple-darwin
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux deps
+        if: matrix.os == 'ubuntu-latest'
+        uses: ./.github/actions/install-linux-deps
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      # Install cargo-nextest
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+
+      # Run unit tests (fast, no external deps)
+      - name: Unit tests
+        run: cargo nextest run --workspace --lib --profile ci
+
+      # Run doc tests (nextest doesn't support)
+      - name: Doc tests
+        run: cargo test --workspace --doc
+
+      # Run integration tests
+      - name: Integration tests
+        run: cargo nextest run -p tests --profile ci
+
+  # ─────────────────────────────────────────────────────────────
+  # Build Verification (ensures app compiles on all platforms)
+  # ─────────────────────────────────────────────────────────────
+  build:
+    needs: [rust-check, ts-check]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: macos-latest
+            target: aarch64-apple-darwin
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux deps
+        if: matrix.os == 'ubuntu-latest'
+        uses: ./.github/actions/install-linux-deps
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+        env:
+          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}-build
+        env:
+          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+        env:
+          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+
+  # ─────────────────────────────────────────────────────────────
+  # E2E Tests (Web-only Playwright for UI smoke tests)
+  # Skip with [skip e2e] in commit message for faster PR iteration
+  # ─────────────────────────────────────────────────────────────
+  e2e-web:
+    needs: [ts-check]
+    if: "!contains(github.event.head_commit.message, '[skip e2e]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      # Cache Playwright browsers
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run web-only E2E tests
+        run: pnpm test:e2e:web --project=chromium
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: tests/e2e/reports/
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────
+  # E2E Desktop trigger check: main, [e2e] in commit, or /e2e-desktop comment on PR
+  # ─────────────────────────────────────────────────────────────
+  e2e-trigger-check:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      contents: read
+    outputs:
+      run_e2e: ${{ steps.check.outputs.should_run }}
+    steps:
+      - name: Check if e2e-desktop should run
+        id: check
+        uses: ./.github/actions/check-comment-trigger
+        with:
+          trigger: '/e2e-desktop'
+          check_main: 'true'
+          check_commit: 'true'
+
+  # ─────────────────────────────────────────────────────────────
+  # E2E Tests (Desktop app with WebDriver - Linux/Windows only)
+  # Runs when: main branch, [e2e] in commit, or /e2e-desktop comment on PR
+  # ─────────────────────────────────────────────────────────────
+  e2e-desktop:
+    needs: [build, e2e-trigger-check]
+    if: needs.e2e-trigger-check.outputs.run_e2e == 'true'
+    uses: ./.github/workflows/e2e-desktop.yml
+    with:
+      ref: ${{ github.event.pull_request.head.sha || github.sha }}
+    secrets: inherit

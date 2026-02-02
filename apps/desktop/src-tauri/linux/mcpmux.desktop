@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=McpMux
+Comment=Unified MCP Gateway & Manager
+Exec={{exec}} %U
+Icon={{icon}}
+Terminal=false
+Type=Application
+Categories=Development;Utility;
+MimeType=x-scheme-handler/mcpmux;
+StartupWMClass=McpMux
+Keywords=mcp;model context protocol;ai;llm;
