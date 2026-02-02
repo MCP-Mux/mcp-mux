@@ -142,7 +142,7 @@ jobs:
 
       # Run unit tests (fast, no external deps)
       - name: Unit tests
-        run: cargo nextest run --workspace --lib --profile ci
+        run: cargo nextest run --workspace --lib --profile ci-unit
 
       # Run doc tests (nextest doesn't support)
       - name: Doc tests
@@ -150,15 +150,23 @@ jobs:
 
       # Run integration tests (outputs JUnit XML)
       - name: Integration tests
-        run: cargo nextest run -p tests --profile ci
+        run: cargo nextest run -p tests --profile ci-integration
 
-      # Upload test results for reporting
-      - name: Upload test results
+      # Upload test results for reporting (separate artifacts per type)
+      - name: Upload unit test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results-${{ matrix.os }}
-          path: target/nextest/ci/junit.xml
+          name: test-results-rust-unit-${{ matrix.os }}
+          path: target/nextest/ci-unit/junit-unit.xml
+          retention-days: 7
+
+      - name: Upload integration test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-rust-integration-${{ matrix.os }}
+          path: target/nextest/ci-integration/junit-integration.xml
           retention-days: 7
 
   # ─────────────────────────────────────────────────────────────
@@ -209,7 +217,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
 
   # ─────────────────────────────────────────────────────────────
-  # Test Results Report (aggregates all test results)
+  # Test Results Report (separate checks per test type and OS)
+  # Uses dorny/test-reporter for granular GitHub Check Runs
   # ─────────────────────────────────────────────────────────────
   test-report:
     needs: [rust-test, ts-check]
@@ -221,17 +230,72 @@ jobs:
         with:
           pattern: test-results-*
           path: test-results
-          merge-multiple: true
 
-      - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2
+      # Rust Unit Tests - Per OS
+      - name: 'Report: Rust Unit Tests (Linux)'
+        uses: dorny/test-reporter@v2
         if: always()
         with:
-          files: |
-            test-results/**/*.xml
-          check_name: 'Test Results'
-          comment_title: 'Test Results'
-          comment_mode: always
+          name: '🦀 Rust Unit Tests (Linux)'
+          path: test-results/test-results-rust-unit-ubuntu-latest/*.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: 'Report: Rust Unit Tests (Windows)'
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: '🦀 Rust Unit Tests (Windows)'
+          path: test-results/test-results-rust-unit-windows-latest/*.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: 'Report: Rust Unit Tests (macOS)'
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: '🦀 Rust Unit Tests (macOS)'
+          path: test-results/test-results-rust-unit-macos-latest/*.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      # Rust Integration Tests - Per OS
+      - name: 'Report: Rust Integration Tests (Linux)'
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: '🔗 Rust Integration Tests (Linux)'
+          path: test-results/test-results-rust-integration-ubuntu-latest/*.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: 'Report: Rust Integration Tests (Windows)'
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: '🔗 Rust Integration Tests (Windows)'
+          path: test-results/test-results-rust-integration-windows-latest/*.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: 'Report: Rust Integration Tests (macOS)'
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: '🔗 Rust Integration Tests (macOS)'
+          path: test-results/test-results-rust-integration-macos-latest/*.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      # TypeScript Tests
+      - name: 'Report: TypeScript Tests'
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: '📘 TypeScript Tests'
+          path: test-results/test-results-typescript/*.xml
+          reporter: jest-junit
+          fail-on-error: false
 
   # ─────────────────────────────────────────────────────────────
   # Coverage Report (uploads to Codecov)
@@ -294,13 +358,22 @@ jobs:
       - name: Run web-only E2E tests
         run: pnpm test:e2e:web --project=chromium
 
-      - name: Upload test results
+      - name: Upload E2E web test results
         uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
-          name: playwright-report
+          name: test-results-e2e-web
           path: tests/e2e/reports/
           retention-days: 7
+
+      - name: 'Report: E2E Web Tests'
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: '🌐 E2E Web Tests'
+          path: tests/e2e/reports/junit.xml
+          reporter: java-junit
+          fail-on-error: false
 
   # ─────────────────────────────────────────────────────────────
   # E2E Desktop trigger check: main, [e2e] in commit, or /e2e-desktop comment on PR

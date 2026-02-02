@@ -101,7 +101,7 @@ jobs:
             tests/e2e/videos/
           retention-days: 7
 
-  # Publish aggregated E2E test results
+  # Publish E2E Desktop test results with separate checks per OS
   e2e-report:
     needs: [e2e-desktop]
     if: always()
@@ -117,14 +117,21 @@ jobs:
         with:
           pattern: e2e-desktop-results-*
           path: test-results
-          merge-multiple: true
 
-      - name: Publish E2E Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2
+      - name: 'Report: E2E Desktop Tests (Linux)'
+        uses: dorny/test-reporter@v2
         if: always()
         with:
-          files: |
-            test-results/**/*.xml
-          check_name: 'E2E Desktop Test Results'
-          comment_title: 'E2E Desktop Test Results'
-          comment_mode: always
+          name: '🖥️ E2E Desktop Tests (Linux)'
+          path: test-results/e2e-desktop-results-ubuntu-latest/**/*.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: 'Report: E2E Desktop Tests (Windows)'
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: '🖥️ E2E Desktop Tests (Windows)'
+          path: test-results/e2e-desktop-results-windows-latest/**/*.xml
+          reporter: java-junit
+          fail-on-error: false
