@@ -21,6 +21,8 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  # Faster git fetches for cargo
+  CARGO_NET_GIT_FETCH_WITH_CLI: true
   # Cache keys for better hit rates
   RUST_CACHE_KEY: v1
   PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
@@ -81,6 +83,19 @@ jobs:
           node-version: 20
           cache: 'pnpm'
 
+      # Cache pnpm store for faster installs
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm lint
@@ -132,9 +147,12 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      # Share cache between rust-test and build jobs for faster compilation
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
+          shared-key: rust-${{ matrix.target }}
+          cache-on-failure: true
 
       # Install cargo-nextest
       - name: Install nextest
@@ -171,6 +189,7 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────
   # Build Verification (ensures app compiles on all platforms)
+  # Runs after checks pass; uses cached Rust build artifacts
   # ─────────────────────────────────────────────────────────────
   build:
     needs: [rust-check, ts-check]
@@ -199,22 +218,63 @@ jobs:
         env:
           PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
 
+      # Use shared cache key so builds benefit from rust-test artifacts
       - uses: Swatinem/rust-cache@v2
         with:
-          key: ${{ matrix.target }}-build
+          key: ${{ matrix.target }}
+          shared-key: rust-${{ matrix.target }}
+          cache-on-failure: true
         env:
           PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
+
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'pnpm'
 
+      # Cache pnpm store
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      # Cache Tauri CLI binary (avoid recompiling on every run)
+      - name: Cache Tauri CLI
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/cargo-tauri*
+            ~/.cargo/bin/tauri*
+          key: tauri-cli-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            tauri-cli-${{ runner.os }}-
+
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
         env:
           PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+
+      # Upload build artifacts for e2e-desktop to reuse (Linux/Windows only)
+      - name: Upload build artifacts
+        if: matrix.os != 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-build-${{ matrix.os }}
+          path: |
+            target/release/bundle/
+            target/release/mcpmux*
+            target/release/*.exe
+          retention-days: 1
+          if-no-files-found: ignore
 
   # ─────────────────────────────────────────────────────────────
   # Test Results Report (separate checks per test type and OS)
@@ -397,9 +457,10 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   # E2E Tests (Desktop app with WebDriver - Linux/Windows only)
   # Runs when: main branch, [e2e] in commit, or /e2e-desktop comment on PR
+  # Depends on build to reuse artifacts (avoids rebuilding Tauri ~5-10 min)
   # ─────────────────────────────────────────────────────────────
   e2e-desktop:
-    needs: [e2e-trigger-check]
+    needs: [e2e-trigger-check, build]
     if: needs.e2e-trigger-check.outputs.run_e2e == 'true'
     uses: ./.github/workflows/e2e-desktop.yml
     with:

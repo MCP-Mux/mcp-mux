@@ -136,24 +136,25 @@ describe('FeatureSet - Server-All Auto Creation', () => {
   });
 
   it('TC-FS-004: Disable server and verify FeatureSet is hidden', async () => {
-    // Aggressively dismiss any open modal/panel - press Escape multiple times
-    await browser.keys('Escape');
-    await browser.pause(300);
-    await browser.keys('Escape');
-    await browser.pause(500);
-    
-    // Click outside any potential modal to dismiss it
-    const body = await $('body');
-    await body.click({ x: 10, y: 10 });
-    await browser.pause(500);
+    // Close the FeatureSet detail panel if open (from previous test)
+    // First try clicking the panel close button
+    const panelCloseBtn = await byTestId('featureset-panel-close');
+    if (await panelCloseBtn.isDisplayed().catch(() => false)) {
+      console.log('[TC-FS-004] Clicking panel close button');
+      await panelCloseBtn.click();
+      await browser.pause(500);
+    } else {
+      // Try clicking the overlay to close
+      const overlay = await byTestId('featureset-panel-overlay');
+      if (await overlay.isDisplayed().catch(() => false)) {
+        console.log('[TC-FS-004] Clicking panel overlay to close');
+        await overlay.click();
+        await browser.pause(500);
+      }
+    }
     
     const myServersButton = await byTestId('nav-my-servers');
-    // Try clicking even if not fully "clickable" - force the click
-    try {
-      await myServersButton.waitForClickable({ timeout: TIMEOUT.short });
-    } catch {
-      console.log('[TC-FS-004] Nav button not clickable, trying force click');
-    }
+    await myServersButton.waitForClickable({ timeout: TIMEOUT.medium });
     await myServersButton.click();
     await browser.pause(2000);
     
@@ -180,24 +181,15 @@ describe('FeatureSet - Server-All Auto Creation', () => {
   });
 
   it('Cleanup: Uninstall Echo Server', async () => {
-    // Aggressively dismiss any open modal/panel
-    await browser.keys('Escape');
-    await browser.pause(300);
-    await browser.keys('Escape');
-    await browser.pause(500);
-    
-    // Click outside any potential modal to dismiss it
-    const body = await $('body');
-    await body.click({ x: 10, y: 10 });
-    await browser.pause(500);
+    // Close any open panel first
+    const panelCloseBtn = await byTestId('featureset-panel-close');
+    if (await panelCloseBtn.isDisplayed().catch(() => false)) {
+      await panelCloseBtn.click();
+      await browser.pause(500);
+    }
     
     const discoverButton = await byTestId('nav-discover');
-    // Try clicking even if not fully "clickable"
-    try {
-      await discoverButton.waitForClickable({ timeout: TIMEOUT.short });
-    } catch {
-      console.log('[Cleanup] Nav button not clickable, trying force click');
-    }
+    await discoverButton.waitForClickable({ timeout: TIMEOUT.medium });
     await discoverButton.click();
     await browser.pause(2000);
     
