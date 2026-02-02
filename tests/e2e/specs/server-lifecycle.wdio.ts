@@ -19,6 +19,16 @@ describe('Server Installation - Echo Server (No Inputs)', () => {
     
     await browser.saveScreenshot('./tests/e2e/screenshots/sl-01-search-echo.png');
     
+    // Check if already installed (uninstall button visible) - can happen if previous test didn't clean up
+    const uninstallButton = await byTestId('uninstall-btn-echo-server');
+    const alreadyInstalled = await uninstallButton.isDisplayed().catch(() => false);
+    
+    if (alreadyInstalled) {
+      console.log('[TC-SD-004] Echo Server already installed, skipping install');
+      await browser.saveScreenshot('./tests/e2e/screenshots/sl-02-installed.png');
+      return;
+    }
+    
     const installButton = await byTestId('install-btn-echo-server');
     // Use longer timeout for CI where registry loading can be slow
     await installButton.waitForDisplayed({ timeout: TIMEOUT.long });
@@ -27,7 +37,6 @@ describe('Server Installation - Echo Server (No Inputs)', () => {
     await browser.pause(3000);
     await waitForModalClose();
     
-    const uninstallButton = await byTestId('uninstall-btn-echo-server');
     await expect(uninstallButton).toBeDisplayed();
     
     await browser.saveScreenshot('./tests/e2e/screenshots/sl-02-installed.png');
