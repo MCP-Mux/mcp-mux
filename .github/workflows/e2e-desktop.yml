@@ -44,6 +44,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.os }}-e2e-desktop
+          shared-key: rust-${{ matrix.os == 'ubuntu-latest' && 'x86_64-unknown-linux-gnu' || 'x86_64-pc-windows-msvc' }}
+          cache-on-failure: true
         env:
           PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
 
@@ -52,6 +54,20 @@ jobs:
         with:
           node-version: 20
           cache: 'pnpm'
+
+      # Cache pnpm store for faster installs
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
 
       - name: Cache tauri-driver
         uses: actions/cache@v4
@@ -66,6 +82,17 @@ jobs:
         env:
           PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
 
+      # Cache Tauri CLI binary (avoid recompiling on every run)
+      - name: Cache Tauri CLI
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/cargo-tauri*
+            ~/.cargo/bin/tauri*
+          key: tauri-cli-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            tauri-cli-${{ runner.os }}-
+
       - run: pnpm install --frozen-lockfile
 
       - name: Build app
@@ -77,8 +104,63 @@ jobs:
       - name: Run desktop E2E tests (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
-          dbus-run-session -- bash -c 'gnome-keyring-daemon --unlock < /dev/null; sleep 2; xvfb-run --auto-servernum pnpm test:e2e'
+          # Start dbus session and unlock gnome-keyring with a dummy password for CI
+          dbus-run-session -- bash -c '
+            echo "test" | gnome-keyring-daemon --unlock --components=secrets
+            export $(gnome-keyring-daemon --start --components=secrets)
+            sleep 1
+            xvfb-run --auto-servernum pnpm test:e2e
+          '
 
       - name: Run desktop E2E tests (Windows)
         if: matrix.os == 'windows-latest'
         run: pnpm test:e2e
+
+      # Upload test results and artifacts
+      - name: Upload E2E test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-desktop-results-${{ matrix.os }}
+          path: |
+            tests/e2e/reports/
+            tests/e2e/screenshots/
+            tests/e2e/videos/
+          retention-days: 7
+
+  # Publish E2E Desktop test results with separate checks per OS
+  e2e-report:
+    needs: [e2e-desktop]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all E2E test results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: e2e-desktop-results-*
+          path: test-results
+
+      - name: 'Report: E2E Desktop Tests (Linux)'
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: '🖥️ E2E Desktop Tests (Linux)'
+          path: test-results/e2e-desktop-results-ubuntu-latest/**/*.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: 'Report: E2E Desktop Tests (Windows)'
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: '🖥️ E2E Desktop Tests (Windows)'
+          path: test-results/e2e-desktop-results-windows-latest/**/*.xml
+          reporter: java-junit
+          fail-on-error: false

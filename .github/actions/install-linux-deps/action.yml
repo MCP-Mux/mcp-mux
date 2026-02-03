@@ -1,5 +1,5 @@
 name: Install Linux deps
-description: Install build and runtime deps for Tauri app on Ubuntu
+description: Install build and runtime deps for Tauri app on Ubuntu (with caching)
 inputs:
   e2e:
     description: Include E2E desktop deps (webkit2gtk-driver, xvfb, gnome-keyring)
@@ -12,22 +12,39 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Install Linux deps
+    # Cache apt packages to avoid re-downloading on every run
+    - name: Cache apt packages (base)
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: build-essential pkg-config libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libsecret-1-dev
+        version: 1.0
+
+    - name: Cache apt packages (E2E)
+      if: ${{ inputs.e2e == 'true' }}
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: webkit2gtk-driver xvfb gnome-keyring gsettings-desktop-schemas dbus-x11 at-spi2-core libglib2.0-bin
+        version: 1.2
+
+    # Compile gsettings schemas (required after restore from cache)
+    - name: Compile gsettings schemas
+      if: ${{ inputs.e2e == 'true' }}
       shell: bash
       run: |
-        BASE_DEPS="build-essential pkg-config libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libsecret-1-dev"
-        E2E_DEPS="webkit2gtk-driver xvfb gnome-keyring"
-        sudo apt-get update
-        if [ "${{ inputs.e2e }}" = "true" ]; then
-          sudo apt-get install -y $BASE_DEPS $E2E_DEPS
-        else
-          sudo apt-get install -y $BASE_DEPS
-        fi
-        if [ "${{ inputs.verify_glib }}" = "true" ]; then
-          echo "=== Verifying glib-2.0 installation ==="
-          dpkg -l | grep libglib2.0-dev || echo "libglib2.0-dev not installed"
-          find /usr -name 'glib-2.0.pc' 2>/dev/null || echo "glib-2.0.pc not found"
-          pkg-config --modversion glib-2.0 || echo "pkg-config cannot find glib-2.0"
-          pkg-config --exists 'glib-2.0 >= 2.70' && echo "glib-2.0 >= 2.70 found" || (echo "ERROR: glib-2.0 >= 2.70 not found"; exit 1)
-        fi
-        echo "PKG_CONFIG_PATH=$(pkg-config --variable pc_path pkg-config)" >> $GITHUB_ENV
+        sudo glib-compile-schemas /usr/share/glib-2.0/schemas/ || true
+        # Verify the schema is available
+        gsettings list-schemas | grep -q org.gnome.system.proxy && echo "✓ org.gnome.system.proxy schema available" || echo "⚠ schema not found"
+
+    - name: Verify glib installation
+      if: ${{ inputs.verify_glib == 'true' }}
+      shell: bash
+      run: |
+        echo "=== Verifying glib-2.0 installation ==="
+        dpkg -l | grep libglib2.0-dev || echo "libglib2.0-dev not installed"
+        find /usr -name 'glib-2.0.pc' 2>/dev/null || echo "glib-2.0.pc not found"
+        pkg-config --modversion glib-2.0 || echo "pkg-config cannot find glib-2.0"
+        pkg-config --exists 'glib-2.0 >= 2.70' && echo "glib-2.0 >= 2.70 found" || (echo "ERROR: glib-2.0 >= 2.70 not found"; exit 1)
+
+    - name: Set PKG_CONFIG_PATH
+      shell: bash
+      run: echo "PKG_CONFIG_PATH=$(pkg-config --variable pc_path pkg-config)" >> $GITHUB_ENV

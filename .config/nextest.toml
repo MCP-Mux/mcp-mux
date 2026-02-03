@@ -16,3 +16,24 @@ final-status-level = "slow"
 [profile.ci.junit]
 path = "junit.xml"
 report-name = "mcpmux-tests"
+
+# Separate profiles for granular test reporting
+[profile.ci-unit]
+fail-fast = false
+retries = 3
+status-level = "retry"
+final-status-level = "slow"
+
+[profile.ci-unit.junit]
+path = "junit-unit.xml"
+report-name = "mcpmux-unit-tests"
+
+[profile.ci-integration]
+fail-fast = false
+retries = 3
+status-level = "retry"
+final-status-level = "slow"
+
+[profile.ci-integration.junit]
+path = "junit-integration.xml"
+report-name = "mcpmux-integration-tests"

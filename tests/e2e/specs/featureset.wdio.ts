@@ -3,12 +3,12 @@
  * Uses data-testid only (ADR-003).
  */
 
-import { byTestId } from '../helpers/selectors';
+import { byTestId, TIMEOUT, waitForModalClose, safeClick } from '../helpers/selectors';
 
 describe('FeatureSet - Builtin Sets', () => {
   it('TC-FS-001: Navigate to FeatureSets page and verify builtin sets exist', async () => {
     const featureSetsButton = await byTestId('nav-featuresets');
-    await featureSetsButton.click();
+    await safeClick(featureSetsButton);
     await browser.pause(2000);
     
     await browser.saveScreenshot('./tests/e2e/screenshots/fs-01-page.png');
@@ -36,7 +36,7 @@ describe('FeatureSet - Builtin Sets', () => {
 describe('FeatureSet - Server-All Auto Creation', () => {
   it('Setup: Install and Enable Echo Server', async () => {
     const discoverButton = await byTestId('nav-discover');
-    await discoverButton.click();
+    await safeClick(discoverButton);
     await browser.pause(2000);
     
     const searchInput = await byTestId('search-input');
@@ -49,21 +49,22 @@ describe('FeatureSet - Server-All Auto Creation', () => {
     const isInstallDisplayed = await installButton.isDisplayed().catch(() => false);
     
     if (isInstallDisplayed) {
-      await installButton.waitForClickable({ timeout: 5000 });
-      await installButton.click();
+      await installButton.waitForClickable({ timeout: TIMEOUT.medium });
+      await safeClick(installButton);
       await browser.pause(3000);
+      await waitForModalClose();
     }
     
     const myServersButton = await byTestId('nav-my-servers');
-    await myServersButton.click();
+    await safeClick(myServersButton);
     await browser.pause(2000);
     
     const enableButton = await byTestId('enable-server-echo-server');
     const isEnableDisplayed = await enableButton.isDisplayed().catch(() => false);
     
     if (isEnableDisplayed) {
-      await enableButton.click();
-      await browser.pause(5000); // Wait for connection
+      await safeClick(enableButton);
+      await browser.pause(TIMEOUT.medium); // Wait for MCP connection on slow CI
     }
     
     await browser.saveScreenshot('./tests/e2e/screenshots/fs-02-server-enabled.png');
@@ -80,7 +81,7 @@ describe('FeatureSet - Server-All Auto Creation', () => {
 
   it('TC-FS-002: Verify server-all FeatureSet is created for Echo Server', async () => {
     const featureSetsButton = await byTestId('nav-featuresets');
-    await featureSetsButton.click();
+    await safeClick(featureSetsButton);
     await browser.pause(2000);
     
     await browser.saveScreenshot('./tests/e2e/screenshots/fs-03-featuresets-with-server.png');
@@ -135,7 +136,25 @@ describe('FeatureSet - Server-All Auto Creation', () => {
   });
 
   it('TC-FS-004: Disable server and verify FeatureSet is hidden', async () => {
+    // Close the FeatureSet detail panel if open (from previous test)
+    // First try clicking the panel close button
+    const panelCloseBtn = await byTestId('featureset-panel-close');
+    if (await panelCloseBtn.isDisplayed().catch(() => false)) {
+      console.log('[TC-FS-004] Clicking panel close button');
+      await panelCloseBtn.click();
+      await browser.pause(500);
+    } else {
+      // Try clicking the overlay to close
+      const overlay = await byTestId('featureset-panel-overlay');
+      if (await overlay.isDisplayed().catch(() => false)) {
+        console.log('[TC-FS-004] Clicking panel overlay to close');
+        await overlay.click();
+        await browser.pause(500);
+      }
+    }
+    
     const myServersButton = await byTestId('nav-my-servers');
+    await myServersButton.waitForClickable({ timeout: TIMEOUT.medium });
     await myServersButton.click();
     await browser.pause(2000);
     
@@ -148,6 +167,7 @@ describe('FeatureSet - Server-All Auto Creation', () => {
     }
     
     const featureSetsButton = await byTestId('nav-featuresets');
+    await featureSetsButton.waitForClickable({ timeout: TIMEOUT.medium });
     await featureSetsButton.click();
     await browser.pause(2000);
     
@@ -161,7 +181,15 @@ describe('FeatureSet - Server-All Auto Creation', () => {
   });
 
   it('Cleanup: Uninstall Echo Server', async () => {
+    // Close any open panel first
+    const panelCloseBtn = await byTestId('featureset-panel-close');
+    if (await panelCloseBtn.isDisplayed().catch(() => false)) {
+      await panelCloseBtn.click();
+      await browser.pause(500);
+    }
+    
     const discoverButton = await byTestId('nav-discover');
+    await discoverButton.waitForClickable({ timeout: TIMEOUT.medium });
     await discoverButton.click();
     await browser.pause(2000);
     
@@ -175,7 +203,7 @@ describe('FeatureSet - Server-All Auto Creation', () => {
     const isDisplayed = await uninstallButton.isDisplayed().catch(() => false);
     
     if (isDisplayed) {
-      await uninstallButton.waitForClickable({ timeout: 5000 });
+      await uninstallButton.waitForClickable({ timeout: TIMEOUT.medium });
       await uninstallButton.click();
       await browser.pause(2000);
     }
