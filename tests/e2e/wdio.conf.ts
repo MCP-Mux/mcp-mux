@@ -35,11 +35,22 @@ const MOCK_BUNDLE_API_PORT = 8787;
 const STUB_MCP_HTTP_PORT = 3457;
 const STUB_MCP_OAUTH_PORT = 3458;
 
-// App data directory (Windows: %LOCALAPPDATA%/com.mcpmux.desktop/)
-const APP_DATA_DIR = path.join(
-  process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'),
-  'com.mcpmux.desktop'
-);
+// App data directory (platform-specific)
+// Windows: %LOCALAPPDATA%/com.mcpmux.desktop/
+// Linux: ~/.local/share/com.mcpmux.desktop/
+function getAppDataDir(): string {
+  if (process.platform === 'win32') {
+    return path.join(
+      process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'),
+      'com.mcpmux.desktop'
+    );
+  } else {
+    // Linux (and other Unix-like)
+    return path.join(os.homedir(), '.local', 'share', 'com.mcpmux.desktop');
+  }
+}
+
+const APP_DATA_DIR = getAppDataDir();
 const BUNDLE_CACHE_PATH = path.join(APP_DATA_DIR, 'cache', 'registry-bundle.json');
 
 // Path to built app
@@ -168,6 +179,35 @@ function closeTauriDriver() {
   stopMockServers();
 }
 
+// Kill any running mcpmux processes to prevent single-instance conflicts
+function killMcpmuxProcesses(): void {
+  try {
+    if (process.platform === 'win32') {
+      // On Windows, use taskkill
+      spawnSync('taskkill', ['/F', '/IM', 'mcpmux.exe'], { stdio: 'ignore' });
+    } else {
+      // On Linux, use pkill
+      spawnSync('pkill', ['-9', '-f', 'mcpmux'], { stdio: 'ignore' });
+    }
+    console.log('[e2e] Killed any existing mcpmux processes');
+  } catch (error) {
+    // Ignore errors - process may not exist
+  }
+}
+
+// Clear single-instance lock file
+function clearSingleInstanceLock(): void {
+  try {
+    const lockFilePath = path.join(APP_DATA_DIR, '.single-instance-lock');
+    if (fs.existsSync(lockFilePath)) {
+      fs.unlinkSync(lockFilePath);
+      console.log('[e2e] Cleared single-instance lock');
+    }
+  } catch (error) {
+    console.warn('[e2e] Failed to clear single-instance lock:', error);
+  }
+}
+
 function onShutdown(fn: () => void) {
   const cleanup = () => {
     try {
@@ -283,6 +323,16 @@ export const config: Options.Testrunner = {
 
   // Start tauri-driver before the session starts
   beforeSession: function () {
+    // Kill any leftover mcpmux processes and clear lock from previous sessions
+    killMcpmuxProcesses();
+    clearSingleInstanceLock();
+    
+    // Small delay to ensure processes are fully terminated
+    spawnSync('sleep', ['1'], { stdio: 'ignore', shell: process.platform !== 'win32' });
+    if (process.platform === 'win32') {
+      spawnSync('timeout', ['/t', '1', '/nobreak'], { stdio: 'ignore', shell: true });
+    }
+    
     const tauriDriverPath = path.resolve(
       os.homedir(),
       '.cargo',
@@ -316,18 +366,9 @@ export const config: Options.Testrunner = {
   afterSession: function () {
     closeTauriDriver();
     
-    // Clear single-instance lock to prevent conflicts between test workers
-    // On Linux: ~/.local/share/com.mcpmux.desktop/.single-instance-lock
-    // On Windows: %LOCALAPPDATA%\com.mcpmux.desktop\.single-instance-lock
-    try {
-      const lockFilePath = path.join(APP_DATA_DIR, '.single-instance-lock');
-      if (fs.existsSync(lockFilePath)) {
-        fs.unlinkSync(lockFilePath);
-        console.log('[e2e] Cleared single-instance lock');
-      }
-    } catch (error) {
-      console.warn('[e2e] Failed to clear single-instance lock:', error);
-    }
+    // Kill the mcpmux app process and clear lock to prevent conflicts between test workers
+    killMcpmuxProcesses();
+    clearSingleInstanceLock();
   },
 
   // Clean up mock servers after all tests complete
