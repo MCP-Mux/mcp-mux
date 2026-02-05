@@ -311,7 +311,11 @@ mod tests {
 
     #[async_trait]
     impl CredentialRepository for MockCredentialRepo {
-        async fn get(&self, _space_id: &Uuid, _server_id: &str) -> anyhow::Result<Option<Credential>> {
+        async fn get(
+            &self,
+            _space_id: &Uuid,
+            _server_id: &str,
+        ) -> anyhow::Result<Option<Credential>> {
             Ok(self.credential.read().await.clone())
         }
 
@@ -355,7 +359,11 @@ mod tests {
 
     #[async_trait]
     impl OutboundOAuthRepository for MockOAuthRepo {
-        async fn get(&self, _space_id: &Uuid, _server_id: &str) -> anyhow::Result<Option<OutboundOAuthRegistration>> {
+        async fn get(
+            &self,
+            _space_id: &Uuid,
+            _server_id: &str,
+        ) -> anyhow::Result<Option<OutboundOAuthRegistration>> {
             Ok(self.registration.read().await.clone())
         }
 
@@ -369,7 +377,10 @@ mod tests {
             Ok(())
         }
 
-        async fn list_for_space(&self, _space_id: &Uuid) -> anyhow::Result<Vec<OutboundOAuthRegistration>> {
+        async fn list_for_space(
+            &self,
+            _space_id: &Uuid,
+        ) -> anyhow::Result<Vec<OutboundOAuthRegistration>> {
             Ok(vec![])
         }
     }
@@ -428,19 +439,14 @@ mod tests {
         };
         cred_repo.set(credential).await;
 
-        let store = DatabaseCredentialStore::new(
-            space_id,
-            server_id,
-            server_url,
-            cred_repo,
-            oauth_repo,
-        );
+        let store =
+            DatabaseCredentialStore::new(space_id, server_id, server_url, cred_repo, oauth_repo);
 
         // First load - should have ~10 seconds
         let stored1 = store.load().await.unwrap().unwrap();
         let token1 = stored1.token_response.as_ref().unwrap();
         let expires_in_1 = token1.expires_in().unwrap();
-        
+
         assert!(expires_in_1.as_secs() >= 9 && expires_in_1.as_secs() <= 10);
 
         // Wait 2 seconds
@@ -450,16 +456,21 @@ mod tests {
         let stored2 = store.load().await.unwrap().unwrap();
         let token2 = stored2.token_response.as_ref().unwrap();
         let expires_in_2 = token2.expires_in().unwrap();
-        
+
         // This is the critical assertion: expires_in should decrease because it's recalculated
-        assert!(expires_in_2.as_secs() >= 7 && expires_in_2.as_secs() <= 8,
+        assert!(
+            expires_in_2.as_secs() >= 7 && expires_in_2.as_secs() <= 8,
             "Expected expires_in to decrease from ~10s to ~8s, but got {} seconds",
-            expires_in_2.as_secs());
-        
+            expires_in_2.as_secs()
+        );
+
         // Verify it actually decreased
-        assert!(expires_in_2 < expires_in_1,
+        assert!(
+            expires_in_2 < expires_in_1,
             "expires_in should decrease on subsequent loads (was {}, now {})",
-            expires_in_1.as_secs(), expires_in_2.as_secs());
+            expires_in_1.as_secs(),
+            expires_in_2.as_secs()
+        );
     }
 
     #[tokio::test]
@@ -500,22 +511,20 @@ mod tests {
         };
         cred_repo.set(credential).await;
 
-        let store = DatabaseCredentialStore::new(
-            space_id,
-            server_id,
-            server_url,
-            cred_repo,
-            oauth_repo,
-        );
+        let store =
+            DatabaseCredentialStore::new(space_id, server_id, server_url, cred_repo, oauth_repo);
 
         // Load should return token with expires_in = 0 (expired)
         let stored = store.load().await.unwrap().unwrap();
         let token = stored.token_response.as_ref().unwrap();
         let expires_in = token.expires_in().unwrap();
-        
-        assert_eq!(expires_in.as_secs(), 0,
+
+        assert_eq!(
+            expires_in.as_secs(),
+            0,
             "Expired token should have expires_in = 0, got {} seconds",
-            expires_in.as_secs());
+            expires_in.as_secs()
+        );
     }
 
     #[tokio::test]
@@ -542,7 +551,7 @@ mod tests {
             Some("new_refresh".to_string()),
             Some(std::time::Duration::from_secs(3600)),
         );
-        
+
         let credentials = StoredCredentials {
             client_id: "new-client-id".to_string(),
             token_response: Some(token_response),
