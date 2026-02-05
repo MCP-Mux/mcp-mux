@@ -25,6 +25,9 @@ semver_check = false
 # Don't publish to crates.io
 publish = false
 
+# Skip cargo package verification (internal deps don't have version specs)
+cargo_package_verify = false
+
 [changelog]
 header = """# Changelog
 
