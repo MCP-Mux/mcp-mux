@@ -2,10 +2,20 @@
 # https://release-plz.dev/docs/config
 
 [workspace]
+# IMPORTANT: Disable release for all packages by default
+# Only the mcpmux package will be released (enabled below)
+release = false
+
 # Use git tags for version detection (not crates.io) - we're a desktop app
 git_only = true
 
-# Enable GitHub releases
+# Don't publish any crates to crates.io
+publish = false
+
+# Don't run cargo semver-checks (not a library)
+semver_check = false
+
+# Enable GitHub releases (will be enabled for mcpmux package)
 git_release_enable = true
 git_tag_enable = true
 
@@ -18,15 +28,6 @@ release_always = true  # Release on every push if version is untagged
 pr_name = "chore: release v{{ version }}"
 pr_labels = ["release", "automated"]
 pr_draft = false
-
-# Don't run cargo semver-checks (not a library)
-semver_check = false
-
-# Don't publish to crates.io
-publish = false
-
-# Skip cargo package verification (internal deps don't have version specs)
-publish_no_verify = true
 
 [changelog]
 header = """# Changelog
@@ -76,44 +77,21 @@ commit_preprocessors = [
     { pattern = "\\(#([0-9]+)\\)", replace = "([#${1}](https://github.com/MCP-Mux/mcp-mux/pull/${1}))" },
 ]
 
-# Only release the main desktop app, not the library crates
+# ─────────────────────────────────────────────────────────────────────────────
+# PACKAGE CONFIGURATION
+# ─────────────────────────────────────────────────────────────────────────────
+# Only the mcpmux desktop app is released. All other crates inherit
+# release = false from [workspace] and are completely ignored by release-plz.
+
 [[package]]
 name = "mcpmux"
-# Path relative to workspace root (not package root)
-changelog_path = "CHANGELOG.md"
+# Enable release for this package (overrides workspace default of false)
 release = true
-git_only = true
-publish = false
+# Path relative to workspace root
+changelog_path = "CHANGELOG.md"
 # Include commits from internal crates in the main changelog
 changelog_include = ["mcpmux-core", "mcpmux-gateway", "mcpmux-mcp", "mcpmux-storage"]
 
-# Disable release for library crates (they're internal, not published)
-[[package]]
-name = "mcpmux-core"
-release = false
-git_only = true
-publish = false
-
-[[package]]
-name = "mcpmux-gateway"
-release = false
-git_only = true
-publish = false
-
-[[package]]
-name = "mcpmux-mcp"
-release = false
-git_only = true
-publish = false
-
-[[package]]
-name = "mcpmux-storage"
-release = false
-git_only = true
-publish = false
-
-[[package]]
-name = "tests"
-release = false
-git_only = true
-publish = false
+# Note: Library crates (mcpmux-core, mcpmux-gateway, mcpmux-mcp, mcpmux-storage, tests)
+# inherit release = false from [workspace], so they are not processed at all.
+# No need to explicitly list them here.
