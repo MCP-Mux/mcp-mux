@@ -14,42 +14,32 @@ env:
 
 jobs:
   # ─────────────────────────────────────────────────────────────
-  # Changesets: Version management and release PR
+  # Release Please: Create/update release PR with version bump
   # ─────────────────────────────────────────────────────────────
-  changesets:
+  release-please:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     outputs:
-      published: ${{ steps.changesets.outputs.published }}
-      publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }}.${{ steps.release.outputs.patch }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: googleapis/release-please-action@v4
+        id: release
         with:
-          fetch-depth: 0
-
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Create Release PR or Publish
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          title: 'chore: version packages'
-          commit: 'chore: version packages'
-          version: pnpm changeset version
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use manifest mode for Rust project
+          manifest-file: .release-please-manifest.json
+          config-file: release-please-config.json
 
   # ─────────────────────────────────────────────────────────────
-  # Build and Release: Triggered when changesets publishes
+  # Build Release: Build Tauri app when release is created
   # ─────────────────────────────────────────────────────────────
   build-release:
-    needs: changesets
-    if: needs.changesets.outputs.published == 'true'
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+
     strategy:
       fail-fast: false
       matrix:
@@ -63,7 +53,7 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact: macos-arm
-          - os: macos-13
+          - os: macos-15
             target: x86_64-apple-darwin
             artifact: macos-intel
 
@@ -101,7 +91,7 @@ jobs:
 
       # Import Apple certificate for macOS signing
       - name: Import Apple certificate
-        if: matrix.os == 'macos-latest' || matrix.os == 'macos-13'
+        if: matrix.os == 'macos-latest' || matrix.os == 'macos-15'
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -133,66 +123,10 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
-          tagName: v__VERSION__
-          releaseName: 'McpMux v__VERSION__'
-          releaseBody: 'See the changelog for details.'
+          # Use tagName to find and upload to the existing release created by release-please
+          tagName: ${{ needs.release-please.outputs.tag_name }}
+          releaseName: 'McpMux v${{ needs.release-please.outputs.version }}'
+          releaseBody: ''  # Release notes already created by release-please
           releaseDraft: false
           prerelease: false
           updaterJsonKeepUniversal: true
-
-  # ─────────────────────────────────────────────────────────────
-  # Nightly: Build on every push (no release)
-  # ─────────────────────────────────────────────────────────────
-  nightly:
-    if: "github.event_name == 'push' && !contains(github.event.head_commit.message, 'chore: version packages')"
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-          - os: macos-latest
-            target: aarch64-apple-darwin
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Linux deps
-        if: matrix.os == 'ubuntu-latest'
-        uses: ./.github/actions/install-linux-deps
-        with:
-          verify_glib: 'false'
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-        env:
-          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: ${{ matrix.target }}-nightly
-        env:
-          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
-
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-${{ matrix.target }}
-          path: |
-            target/release/bundle/**/*
-          retention-days: 7

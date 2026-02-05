@@ -11,9 +11,18 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Permissions needed for test reporting and PR comments
+permissions:
+  contents: read
+  actions: read
+  checks: write
+  pull-requests: write
+
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  # Faster git fetches for cargo
+  CARGO_NET_GIT_FETCH_WITH_CLI: true
   # Cache keys for better hit rates
   RUST_CACHE_KEY: v1
   PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
@@ -74,11 +83,41 @@ jobs:
           node-version: 20
           cache: 'pnpm'
 
+      # Cache pnpm store for faster installs
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm lint
-      - name: TypeScript tests
-        run: pnpm test:ts
+
+      - name: TypeScript tests with coverage
+        run: pnpm exec vitest run -c tests/ts/vitest.config.ts --coverage
+
+      - name: Upload TS test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-typescript
+          path: tests/ts/test-results/
+          retention-days: 7
+
+      - name: Upload TS coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-typescript
+          path: tests/ts/coverage/
+          retention-days: 7
 
   # ─────────────────────────────────────────────────────────────
   # Rust Tests (cross-platform matrix)
@@ -108,9 +147,12 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      # Share cache between rust-test and build jobs for faster compilation
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
+          shared-key: rust-${{ matrix.target }}
+          cache-on-failure: true
 
       # Install cargo-nextest
       - name: Install nextest
@@ -118,62 +160,199 @@ jobs:
 
       # Run unit tests (fast, no external deps)
       - name: Unit tests
-        run: cargo nextest run --workspace --lib --profile ci
+        run: cargo nextest run --workspace --lib --profile ci-unit
 
       # Run doc tests (nextest doesn't support)
       - name: Doc tests
         run: cargo test --workspace --doc
 
-      # Run integration tests
+      # Run integration tests (outputs JUnit XML)
       - name: Integration tests
-        run: cargo nextest run -p tests --profile ci
+        run: cargo nextest run -p tests --profile ci-integration
+
+      # Upload test results for reporting (separate artifacts per type)
+      - name: Upload unit test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-rust-unit-${{ matrix.os }}
+          path: target/nextest/ci-unit/junit-unit.xml
+          retention-days: 7
+
+      - name: Upload integration test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-rust-integration-${{ matrix.os }}
+          path: target/nextest/ci-integration/junit-integration.xml
+          retention-days: 7
 
   # ─────────────────────────────────────────────────────────────
-  # Build Verification (ensures app compiles on all platforms)
+  # Build Verification (macOS only - Linux/Windows covered by e2e-desktop)
   # ─────────────────────────────────────────────────────────────
   build:
     needs: [rust-check, ts-check]
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-          - os: macos-latest
-            target: aarch64-apple-darwin
-
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '10.13'
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Linux deps
-        if: matrix.os == 'ubuntu-latest'
-        uses: ./.github/actions/install-linux-deps
-
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
-        env:
-          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
+          targets: aarch64-apple-darwin
 
       - uses: Swatinem/rust-cache@v2
         with:
-          key: ${{ matrix.target }}-build
-        env:
-          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
+          key: aarch64-apple-darwin
+          shared-key: rust-aarch64-apple-darwin
+          cache-on-failure: true
+
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'pnpm'
 
+      # Cache pnpm store
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      # Cache Tauri CLI binary
+      - name: Cache Tauri CLI
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/cargo-tauri*
+            ~/.cargo/bin/tauri*
+          key: tauri-cli-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            tauri-cli-${{ runner.os }}-
+
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
         env:
-          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+
+  # ─────────────────────────────────────────────────────────────
+  # Test Results Report (separate checks per test type and OS)
+  # Uses dorny/test-reporter for granular GitHub Check Runs
+  # ─────────────────────────────────────────────────────────────
+  test-report:
+    needs: [rust-test, ts-check]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all test results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-results-*
+          path: test-results
+
+      # Rust Unit Tests - Per OS
+      - name: 'Report: Rust Unit Tests (Linux)'
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: '🦀 Rust Unit Tests (Linux)'
+          path: test-results/test-results-rust-unit-ubuntu-latest/*.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: 'Report: Rust Unit Tests (Windows)'
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: '🦀 Rust Unit Tests (Windows)'
+          path: test-results/test-results-rust-unit-windows-latest/*.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: 'Report: Rust Unit Tests (macOS)'
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: '🦀 Rust Unit Tests (macOS)'
+          path: test-results/test-results-rust-unit-macos-latest/*.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      # Rust Integration Tests - Per OS
+      - name: 'Report: Rust Integration Tests (Linux)'
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: '🔗 Rust Integration Tests (Linux)'
+          path: test-results/test-results-rust-integration-ubuntu-latest/*.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: 'Report: Rust Integration Tests (Windows)'
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: '🔗 Rust Integration Tests (Windows)'
+          path: test-results/test-results-rust-integration-windows-latest/*.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: 'Report: Rust Integration Tests (macOS)'
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: '🔗 Rust Integration Tests (macOS)'
+          path: test-results/test-results-rust-integration-macos-latest/*.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      # TypeScript Tests
+      - name: 'Report: TypeScript Tests'
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: '📘 TypeScript Tests'
+          path: test-results/test-results-typescript/*.xml
+          reporter: jest-junit
+          fail-on-error: false
+
+  # ─────────────────────────────────────────────────────────────
+  # Coverage Report (uploads to Codecov)
+  # ─────────────────────────────────────────────────────────────
+  coverage-report:
+    needs: [ts-check]
+    if: always() && needs.ts-check.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: coverage
+          merge-multiple: true
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage/lcov.info
+          flags: typescript
+          name: mcpmux-ts-coverage
+          fail_ci_if_error: false
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   # ─────────────────────────────────────────────────────────────
   # E2E Tests (Web-only Playwright for UI smoke tests)
@@ -208,40 +387,30 @@ jobs:
       - name: Run web-only E2E tests
         run: pnpm test:e2e:web --project=chromium
 
-      - name: Upload test results
+      - name: Upload E2E web test results
         uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
-          name: playwright-report
+          name: test-results-e2e-web
           path: tests/e2e/reports/
           retention-days: 7
 
-  # ─────────────────────────────────────────────────────────────
-  # E2E Desktop trigger check: main, [e2e] in commit, or /e2e-desktop comment on PR
-  # ─────────────────────────────────────────────────────────────
-  e2e-trigger-check:
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: read
-      contents: read
-    outputs:
-      run_e2e: ${{ steps.check.outputs.should_run }}
-    steps:
-      - name: Check if e2e-desktop should run
-        id: check
-        uses: ./.github/actions/check-comment-trigger
+      - name: 'Report: E2E Web Tests'
+        uses: dorny/test-reporter@v2
+        if: always()
         with:
-          trigger: '/e2e-desktop'
-          check_main: 'true'
-          check_commit: 'true'
+          name: '🌐 E2E Web Tests'
+          path: tests/e2e/reports/junit.xml
+          reporter: java-junit
+          fail-on-error: false
 
   # ─────────────────────────────────────────────────────────────
-  # E2E Tests (Desktop app with WebDriver - Linux/Windows only)
-  # Runs when: main branch, [e2e] in commit, or /e2e-desktop comment on PR
+  # E2E Tests (Desktop app with WebDriver - Linux/Windows)
+  # Runs on all commits; skip with [skip e2e] in commit message
   # ─────────────────────────────────────────────────────────────
   e2e-desktop:
-    needs: [build, e2e-trigger-check]
-    if: needs.e2e-trigger-check.outputs.run_e2e == 'true'
+    needs: [rust-check, ts-check]
+    if: "!contains(github.event.head_commit.message, '[skip e2e]')"
     uses: ./.github/workflows/e2e-desktop.yml
     with:
       ref: ${{ github.event.pull_request.head.sha || github.sha }}

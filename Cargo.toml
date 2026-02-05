@@ -10,7 +10,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/mcpmux/mcpmux"
@@ -72,7 +72,7 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
 axum = { version = "0.8", features = ["macros"] }
 http-body-util = "0.1"
 
-# Internal crates
+# Internal crates (path-only for workspace)
 mcpmux-core = { path = "crates/mcpmux-core" }
 mcpmux-gateway = { path = "crates/mcpmux-gateway" }
 mcpmux-mcp = { path = "crates/mcpmux-mcp" }

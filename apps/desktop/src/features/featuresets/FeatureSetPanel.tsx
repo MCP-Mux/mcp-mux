@@ -327,6 +327,7 @@ export function FeatureSetPanel({ featureSet, spaceId, onClose, onDelete, onUpda
             </div>
           </div>
           <button
+            data-testid="featureset-panel-close"
             onClick={onClose}
             className="p-1.5 rounded-lg hover:bg-[rgb(var(--surface-hover))] transition-colors flex-shrink-0"
           >
