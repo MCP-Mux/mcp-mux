@@ -16,8 +16,8 @@ runs:
     - name: Cache apt packages (base)
       uses: awalsh128/cache-apt-pkgs-action@latest
       with:
-        packages: build-essential pkg-config libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libsecret-1-dev
-        version: 1.0
+        packages: build-essential pkg-config libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libsecret-1-dev libfuse2
+        version: 1.1
 
     - name: Cache apt packages (E2E)
       if: ${{ inputs.e2e == 'true' }}
