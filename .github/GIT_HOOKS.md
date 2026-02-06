@@ -13,6 +13,7 @@ The pre-commit hook automatically runs before each commit to validate:
 - Automatically adds formatted files to the commit
 
 ### ✅ **TypeScript Validation**
+- Runs `pnpm lint` to check code style and catch common errors
 - Runs `pnpm typecheck` to verify type correctness
 - Checks all TypeScript files in the workspace
 
@@ -45,6 +46,7 @@ pnpm validate
 # Or individually
 cargo clippy --workspace -- -D warnings
 cargo check --workspace
+pnpm lint
 pnpm typecheck
 ```
 
