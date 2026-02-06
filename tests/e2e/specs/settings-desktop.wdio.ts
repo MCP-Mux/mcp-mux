@@ -117,8 +117,9 @@ describe('Settings - Desktop Features', () => {
             const isDisabled = await startMinimizedSwitch.getAttribute('disabled');
             expect(isDisabled).toBe('true');
 
+            // Note: When disabled, the value stays at its default (true)
             const ariaChecked = await startMinimizedSwitch.getAttribute('aria-checked');
-            expect(ariaChecked).toBe('false');
+            expect(ariaChecked).toBe('true');
         });
 
         it('start minimized should be enabled when auto-launch is on', async () => {
