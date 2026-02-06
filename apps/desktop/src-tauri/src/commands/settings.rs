@@ -22,7 +22,7 @@ pub struct StartupSettings {
 impl Default for StartupSettings {
     fn default() -> Self {
         Self {
-            auto_launch: false,
+            auto_launch: true,
             start_minimized: true,
             close_to_tray: true, // Default to close-to-tray behavior
         }
@@ -96,6 +96,12 @@ pub async fn update_startup_settings(
         info!("[Settings] Auto-launch unchanged, skipping OS update");
     }
 
+    // Mark autostart as explicitly configured so first-launch logic won't re-enable it
+    settings_repo
+        .set("startup.autostart_configured", "true")
+        .await
+        .map_err(|e| format!("Failed to save autostart_configured flag: {}", e))?;
+
     // Update other settings in database
     settings_repo
         .set(
@@ -127,7 +133,7 @@ mod tests {
     #[test]
     fn test_startup_settings_default() {
         let settings = StartupSettings::default();
-        assert_eq!(settings.auto_launch, false);
+        assert_eq!(settings.auto_launch, true);
         assert_eq!(settings.start_minimized, true);
         assert_eq!(settings.close_to_tray, true);
     }

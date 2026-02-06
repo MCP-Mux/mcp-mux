@@ -8,6 +8,8 @@ import {
   CardContent,
   Button,
   Switch,
+  useToast,
+  ToastContainer,
 } from '@mcpmux/ui';
 import {
   Sun,
@@ -34,6 +36,7 @@ export function SettingsPage() {
   const setTheme = useAppStore((state) => state.setTheme);
   const [logsPath, setLogsPath] = useState<string>('');
   const [openingLogs, setOpeningLogs] = useState(false);
+  const { toasts, success, error } = useToast();
 
   // Startup settings state
   const [startupSettings, setStartupSettings] = useState<StartupSettings>({
@@ -91,8 +94,14 @@ export function SettingsPage() {
       console.log('[Settings] Invoking update_startup_settings:', newSettings);
       await invoke('update_startup_settings', { settings: newSettings });
       console.log('[Settings] Successfully saved:', newSettings);
-    } catch (error) {
-      console.error('[Settings] Failed to save:', error);
+      
+      // Show success toast
+      success('Settings saved', 'Your preferences have been updated');
+    } catch (err) {
+      console.error('[Settings] Failed to save:', err);
+      // Show error toast
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      error('Failed to save settings', errorMessage);
       // Revert on error
       setStartupSettings(oldSettings);
     } finally {
@@ -112,11 +121,13 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-[rgb(var(--muted))]">Configure McpMux preferences.</p>
-      </div>
+    <>
+      <ToastContainer toasts={toasts} onClose={(id) => toasts.find(t => t.id === id)?.onClose(id)} />
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Settings</h1>
+          <p className="text-[rgb(var(--muted))]">Configure McpMux preferences.</p>
+        </div>
 
       {/* Updates Section */}
       <UpdateChecker />
@@ -297,5 +308,6 @@ export function SettingsPage() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }
