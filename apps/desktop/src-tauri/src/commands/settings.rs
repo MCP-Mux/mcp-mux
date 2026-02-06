@@ -77,17 +77,23 @@ pub async fn update_startup_settings(
 
     let settings_repo = &app_state.settings_repository;
 
-    // Update auto-launch in OS
-    if settings.auto_launch {
-        manager
-            .enable()
-            .map_err(|e| format!("Failed to enable auto-launch: {}", e))?;
-        info!("[Settings] Auto-launch enabled");
+    // Check if auto-launch setting has changed before modifying OS
+    let current_auto_launch = manager.is_enabled().unwrap_or(false);
+
+    if settings.auto_launch != current_auto_launch {
+        if settings.auto_launch {
+            manager
+                .enable()
+                .map_err(|e| format!("Failed to enable auto-launch: {}", e))?;
+            info!("[Settings] Auto-launch enabled");
+        } else {
+            manager
+                .disable()
+                .map_err(|e| format!("Failed to disable auto-launch: {}", e))?;
+            info!("[Settings] Auto-launch disabled");
+        }
     } else {
-        manager
-            .disable()
-            .map_err(|e| format!("Failed to disable auto-launch: {}", e))?;
-        info!("[Settings] Auto-launch disabled");
+        info!("[Settings] Auto-launch unchanged, skipping OS update");
     }
 
     // Update other settings in database

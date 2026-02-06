@@ -139,9 +139,9 @@ export function SettingsPage() {
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-start gap-3 flex-1">
-                  <Power className="h-5 w-5 mt-0.5 text-[rgb(var(--muted))]" />
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <Power className="h-5 w-5 mt-0.5 text-[rgb(var(--muted))] flex-shrink-0" />
                   <div>
                     <label className="text-sm font-medium">Launch at Startup</label>
                     <p className="text-xs text-[rgb(var(--muted))] mt-1">
@@ -160,9 +160,9 @@ export function SettingsPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-start gap-3 flex-1">
-                  <Minimize2 className="h-5 w-5 mt-0.5 text-[rgb(var(--muted))]" />
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <Minimize2 className="h-5 w-5 mt-0.5 text-[rgb(var(--muted))] flex-shrink-0" />
                   <div>
                     <label className="text-sm font-medium">Start Minimized</label>
                     <p className="text-xs text-[rgb(var(--muted))] mt-1">
@@ -181,9 +181,9 @@ export function SettingsPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-start gap-3 flex-1">
-                  <XCircle className="h-5 w-5 mt-0.5 text-[rgb(var(--muted))]" />
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <XCircle className="h-5 w-5 mt-0.5 text-[rgb(var(--muted))] flex-shrink-0" />
                   <div>
                     <label className="text-sm font-medium">Close to Tray</label>
                     <p className="text-xs text-[rgb(var(--muted))] mt-1">
