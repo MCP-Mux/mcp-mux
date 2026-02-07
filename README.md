@@ -63,23 +63,41 @@ McpMux routes calls to the right server, refreshes OAuth tokens automatically, a
 
 ## Features
 
-**Spaces** — Isolated workspaces with their own servers and credentials. Switch between "Work" and "Personal" in one click.
+### Server Management
+
+Add, remove, and monitor all your MCP servers in one place. See connection status, auth type, and transport at a glance.
+
+![My Servers](docs/screenshots/servers.png)
+
+### Server Registry
+
+Browse and one-click install from a curated registry of MCP servers. Filter by category, auth type, or hosting. Cached for offline use.
+
+![Discover Servers](docs/screenshots/discover.png)
+
+### Spaces
+
+Isolated workspaces with their own servers and credentials. Switch between "Work" and "Personal" in one click — your AI clients follow automatically.
 
 ![Workspaces](docs/screenshots/spaces.png)
 
-**Encrypted Credentials** — Stored in your OS keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service) with AES-256-GCM encryption. Not in plain-text JSON files.
+### Feature Sets
 
-**OAuth That Just Works** — Handles the full OAuth 2.1 + PKCE flow for remote servers. Automatic token refresh. Authenticate once and forget about it.
+Control exactly which tools, prompts, and resources are available. Create custom permission bundles like "Read Only" or "Dev Tools" and assign them to clients.
 
-**Server Registry** — Browse, search, and one-click install MCP servers. Cached for offline use.
+![Feature Sets](docs/screenshots/featuresets.png)
 
-**Per-Client Permissions** — Control which tools each AI client can access with Feature Sets.
+### Connected Clients
 
-**System Tray** — Runs in the background, starts with your OS. Always available.
+See every AI client connected to your gateway. Manage OAuth registrations and control which space each client can access.
+
+![Connected Clients](docs/screenshots/clients.png)
+
+### Settings
+
+Auto-updates, launch at startup, system tray, and appearance preferences.
 
 ![Settings](docs/screenshots/settings.png)
-
-**Auto-Updates** — Signed updates delivered automatically.
 
 ---
 
