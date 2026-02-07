@@ -44,72 +44,41 @@ const SPACE_PERSONAL = {
 
 const SPACES = [SPACE_DEFAULT, SPACE_WORK, SPACE_PERSONAL];
 
-const INSTALLED_SERVERS = [
-  {
-    id: 'inst-1', space_id: SPACE_DEFAULT.id, server_id: 'github-mcp',
-    server_name: 'GitHub', cached_definition: JSON.stringify({
-      id: 'github-mcp', name: 'GitHub', description: 'GitHub API integration — issues, PRs, repos, and code search',
-      alias: 'github', icon: '🐙', categories: ['developer-tools'],
-      transport: { type: 'stdio', command: 'npx', args: ['-y', '@modelcontextprotocol/server-github'], metadata: { inputs: [{ id: 'GITHUB_TOKEN', label: 'GitHub Token', type: 'password', required: true, secret: true }] } },
-      auth: { type: 'api_key' }, publisher: { name: 'Anthropic', verified: true, official: true },
-      capabilities: { tools: true, resources: true, prompts: false },
+function mkInstalled(id, instId, serverId, name, desc, alias, icon, categories, transportType, auth, publisher, caps, inputDefs, inputVals, enabled, oauthConnected) {
+  const transport = transportType === 'stdio'
+    ? { type: 'stdio', command: 'npx', args: ['-y', `@modelcontextprotocol/server-${alias}`], metadata: { inputs: inputDefs || [] } }
+    : { type: 'http', url: `https://mcp.${alias}.com/sse`, headers: {}, metadata: { inputs: inputDefs || [] } };
+  return {
+    id: instId, space_id: SPACE_DEFAULT.id, server_id: serverId,
+    server_name: name, cached_definition: JSON.stringify({
+      id: serverId, name, description: desc, alias, icon, categories, transport, auth,
+      publisher, capabilities: caps,
     }),
-    input_values: { GITHUB_TOKEN: 'ghp_***' }, enabled: true, env_overrides: {}, args_append: [],
-    extra_headers: {}, oauth_connected: false, source: 'Registry',
+    input_values: inputVals || {}, enabled, env_overrides: {}, args_append: [],
+    extra_headers: {}, oauth_connected: oauthConnected || false, source: 'Registry',
     created_at: '2026-01-16T10:00:00Z', updated_at: '2026-01-16T10:00:00Z',
-  },
-  {
-    id: 'inst-2', space_id: SPACE_DEFAULT.id, server_id: 'slack-mcp',
-    server_name: 'Slack', cached_definition: JSON.stringify({
-      id: 'slack-mcp', name: 'Slack', description: 'Send messages, search channels, and manage Slack workspaces',
-      alias: 'slack', icon: '💬', categories: ['productivity'],
-      transport: { type: 'http', url: 'https://mcp.slack.com/sse', metadata: { inputs: [] } },
-      auth: { type: 'oauth' }, publisher: { name: 'Slack', verified: true, official: true },
-      capabilities: { tools: true, resources: false, prompts: true },
-    }),
-    input_values: {}, enabled: true, env_overrides: {}, args_append: [],
-    extra_headers: {}, oauth_connected: true, source: 'Registry',
-    created_at: '2026-01-17T10:00:00Z', updated_at: '2026-01-17T10:00:00Z',
-  },
-  {
-    id: 'inst-3', space_id: SPACE_DEFAULT.id, server_id: 'postgres-mcp',
-    server_name: 'PostgreSQL', cached_definition: JSON.stringify({
-      id: 'postgres-mcp', name: 'PostgreSQL', description: 'Query databases, inspect schemas, and run SQL',
-      alias: 'postgres', icon: '🐘', categories: ['developer-tools'],
-      transport: { type: 'stdio', command: 'npx', args: ['-y', '@modelcontextprotocol/server-postgres'], metadata: { inputs: [{ id: 'DATABASE_URL', label: 'Database URL', type: 'url', required: true, secret: true }] } },
-      auth: { type: 'api_key' }, publisher: { name: 'Anthropic', verified: true, official: true },
-      capabilities: { tools: true, resources: true, prompts: false },
-    }),
-    input_values: { DATABASE_URL: 'postgres://***' }, enabled: true, env_overrides: {}, args_append: [],
-    extra_headers: {}, oauth_connected: false, source: 'Registry',
-    created_at: '2026-01-18T10:00:00Z', updated_at: '2026-01-18T10:00:00Z',
-  },
-  {
-    id: 'inst-4', space_id: SPACE_DEFAULT.id, server_id: 'filesystem-mcp',
-    server_name: 'Filesystem', cached_definition: JSON.stringify({
-      id: 'filesystem-mcp', name: 'Filesystem', description: 'Read, write, and search files on your local machine',
-      alias: 'fs', icon: '📂', categories: ['file-system'],
-      transport: { type: 'stdio', command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem', '/home/user'], metadata: { inputs: [{ id: 'ALLOWED_DIR', label: 'Allowed Directory', type: 'text', required: true, secret: false }] } },
-      auth: { type: 'none' }, publisher: { name: 'Anthropic', verified: true, official: true },
-      capabilities: { tools: true, resources: true, prompts: false },
-    }),
-    input_values: { ALLOWED_DIR: '/home/user/projects' }, enabled: true, env_overrides: {}, args_append: [],
-    extra_headers: {}, oauth_connected: false, source: 'Registry',
-    created_at: '2026-01-19T10:00:00Z', updated_at: '2026-01-19T10:00:00Z',
-  },
-  {
-    id: 'inst-5', space_id: SPACE_DEFAULT.id, server_id: 'brave-search-mcp',
-    server_name: 'Brave Search', cached_definition: JSON.stringify({
-      id: 'brave-search-mcp', name: 'Brave Search', description: 'Web and local search via Brave Search API',
-      alias: 'search', icon: '🔍', categories: ['search'],
-      transport: { type: 'stdio', command: 'npx', args: ['-y', '@anthropic/mcp-server-brave-search'], metadata: { inputs: [{ id: 'BRAVE_API_KEY', label: 'Brave API Key', type: 'password', required: true, secret: true }] } },
-      auth: { type: 'api_key' }, publisher: { name: 'Anthropic', verified: true, official: true },
-      capabilities: { tools: true, resources: false, prompts: false },
-    }),
-    input_values: { BRAVE_API_KEY: 'BSA***' }, enabled: false, env_overrides: {}, args_append: [],
-    extra_headers: {}, oauth_connected: false, source: 'Registry',
-    created_at: '2026-01-20T10:00:00Z', updated_at: '2026-01-20T10:00:00Z',
-  },
+  };
+}
+
+const INSTALLED_SERVERS = [
+  mkInstalled(1, 'inst-1', 'github-mcp', 'GitHub', 'GitHub API integration — issues, PRs, repos, and code search', 'github', '🐙', ['developer-tools'], 'stdio',
+    { type: 'api_key', instructions: null }, { name: 'Anthropic', verified: true, official: true }, { tools: true, resources: true, prompts: false },
+    [{ id: 'GITHUB_TOKEN', label: 'GitHub Token', type: 'password', required: true, secret: true }], { GITHUB_TOKEN: 'ghp_***' }, true, false),
+  mkInstalled(2, 'inst-2', 'atlassian-mcp', 'Atlassian', 'Jira issues, Confluence pages, and project management', 'atlassian', '🔷', ['productivity'], 'http',
+    { type: 'oauth' }, { name: 'Atlassian', verified: true, official: true }, { tools: true, resources: true, prompts: false },
+    [], {}, true, true),
+  mkInstalled(3, 'inst-3', 'cloudflare-mcp', 'Cloudflare', 'Manage Workers, KV, R2, and DNS via Cloudflare API', 'cloudflare', '☁️', ['cloud'], 'http',
+    { type: 'oauth' }, { name: 'Cloudflare', verified: true, official: true }, { tools: true, resources: true, prompts: false },
+    [], {}, true, true),
+  mkInstalled(4, 'inst-4', 'postgres-mcp', 'PostgreSQL', 'Query databases, inspect schemas, and run SQL', 'postgres', '🐘', ['developer-tools'], 'stdio',
+    { type: 'api_key', instructions: null }, { name: 'Anthropic', verified: true, official: true }, { tools: true, resources: true, prompts: false },
+    [{ id: 'DATABASE_URL', label: 'Database URL', type: 'url', required: true, secret: true }], { DATABASE_URL: 'postgres://***' }, true, false),
+  mkInstalled(5, 'inst-5', 'azure-mcp', 'Azure DevOps', 'Azure DevOps work items, repos, and pipelines', 'azure', '🔵', ['cloud'], 'http',
+    { type: 'oauth' }, { name: 'Microsoft', verified: true, official: true }, { tools: true, resources: true, prompts: false },
+    [], {}, true, true),
+  mkInstalled(6, 'inst-6', 'filesystem-mcp', 'Filesystem', 'Read, write, and search files on your local machine', 'filesystem', '📂', ['file-system'], 'stdio',
+    { type: 'none' }, { name: 'Anthropic', verified: true, official: true }, { tools: true, resources: true, prompts: false },
+    [{ id: 'ALLOWED_DIR', label: 'Allowed Directory', type: 'text', required: true, secret: false }], { ALLOWED_DIR: '/home/user/projects' }, true, false),
 ];
 
 function mkFeature(serverId, serverName, type, name, desc) {
@@ -117,18 +86,34 @@ function mkFeature(serverId, serverName, type, name, desc) {
 }
 
 const SERVER_FEATURES = [
+  // GitHub
   mkFeature('github-mcp', 'GitHub', 'tool', 'create_issue', 'Create a new GitHub issue'),
   mkFeature('github-mcp', 'GitHub', 'tool', 'search_code', 'Search code across repositories'),
   mkFeature('github-mcp', 'GitHub', 'tool', 'list_pull_requests', 'List pull requests for a repository'),
   mkFeature('github-mcp', 'GitHub', 'tool', 'create_pull_request', 'Create a new pull request'),
   mkFeature('github-mcp', 'GitHub', 'resource', 'repo://contents', 'Repository file contents'),
-  mkFeature('slack-mcp', 'Slack', 'tool', 'send_message', 'Send a message to a Slack channel'),
-  mkFeature('slack-mcp', 'Slack', 'tool', 'search_messages', 'Search Slack messages'),
-  mkFeature('slack-mcp', 'Slack', 'tool', 'list_channels', 'List available Slack channels'),
-  mkFeature('slack-mcp', 'Slack', 'prompt', 'summarize_thread', 'Summarize a Slack thread'),
+  // Atlassian
+  mkFeature('atlassian-mcp', 'Atlassian', 'tool', 'create_jira_issue', 'Create a Jira issue'),
+  mkFeature('atlassian-mcp', 'Atlassian', 'tool', 'search_issues', 'Search Jira issues with JQL'),
+  mkFeature('atlassian-mcp', 'Atlassian', 'tool', 'get_confluence_page', 'Fetch a Confluence page'),
+  mkFeature('atlassian-mcp', 'Atlassian', 'tool', 'update_issue_status', 'Transition a Jira issue'),
+  mkFeature('atlassian-mcp', 'Atlassian', 'resource', 'jira://boards', 'Jira boards listing'),
+  // Cloudflare
+  mkFeature('cloudflare-mcp', 'Cloudflare', 'tool', 'deploy_worker', 'Deploy a Cloudflare Worker'),
+  mkFeature('cloudflare-mcp', 'Cloudflare', 'tool', 'list_kv_namespaces', 'List KV namespaces'),
+  mkFeature('cloudflare-mcp', 'Cloudflare', 'tool', 'manage_r2_bucket', 'Manage R2 storage buckets'),
+  mkFeature('cloudflare-mcp', 'Cloudflare', 'tool', 'update_dns_record', 'Update DNS records'),
+  mkFeature('cloudflare-mcp', 'Cloudflare', 'resource', 'workers://bindings', 'Worker bindings config'),
+  // PostgreSQL
   mkFeature('postgres-mcp', 'PostgreSQL', 'tool', 'query', 'Execute a SQL query'),
   mkFeature('postgres-mcp', 'PostgreSQL', 'tool', 'describe_table', 'Get table schema'),
   mkFeature('postgres-mcp', 'PostgreSQL', 'resource', 'schema://tables', 'Database table listing'),
+  // Azure DevOps
+  mkFeature('azure-mcp', 'Azure DevOps', 'tool', 'create_work_item', 'Create an Azure DevOps work item'),
+  mkFeature('azure-mcp', 'Azure DevOps', 'tool', 'list_pipelines', 'List CI/CD pipelines'),
+  mkFeature('azure-mcp', 'Azure DevOps', 'tool', 'trigger_pipeline', 'Trigger a pipeline run'),
+  mkFeature('azure-mcp', 'Azure DevOps', 'resource', 'repos://list', 'Azure repos listing'),
+  // Filesystem
   mkFeature('filesystem-mcp', 'Filesystem', 'tool', 'read_file', 'Read a file from disk'),
   mkFeature('filesystem-mcp', 'Filesystem', 'tool', 'write_file', 'Write content to a file'),
   mkFeature('filesystem-mcp', 'Filesystem', 'tool', 'search_files', 'Search files by pattern'),
@@ -138,10 +123,11 @@ const SERVER_FEATURES = [
 
 const SERVER_STATUSES = {
   'github-mcp': { server_id: 'github-mcp', status: 'connected', flow_id: 1, has_connected_before: true, message: null },
-  'slack-mcp': { server_id: 'slack-mcp', status: 'connected', flow_id: 1, has_connected_before: true, message: null },
+  'atlassian-mcp': { server_id: 'atlassian-mcp', status: 'connected', flow_id: 1, has_connected_before: true, message: null },
+  'cloudflare-mcp': { server_id: 'cloudflare-mcp', status: 'connected', flow_id: 1, has_connected_before: true, message: null },
   'postgres-mcp': { server_id: 'postgres-mcp', status: 'connected', flow_id: 1, has_connected_before: true, message: null },
+  'azure-mcp': { server_id: 'azure-mcp', status: 'connected', flow_id: 1, has_connected_before: true, message: null },
   'filesystem-mcp': { server_id: 'filesystem-mcp', status: 'connected', flow_id: 1, has_connected_before: true, message: null },
-  'brave-search-mcp': { server_id: 'brave-search-mcp', status: 'disconnected', flow_id: 0, has_connected_before: false, message: null },
 };
 
 const FEATURE_SETS = [
@@ -153,8 +139,7 @@ const FEATURE_SETS = [
 
 const OAUTH_CLIENTS = [
   { client_id: 'cursor-001', registration_type: 'dcr', client_name: 'Cursor', client_alias: null, redirect_uris: ['http://localhost:9315/callback'], scope: null, approved: true, logo_uri: null, client_uri: null, software_id: 'cursor', software_version: '0.45.0', metadata_url: null, metadata_cached_at: null, metadata_cache_ttl: null, connection_mode: 'follow_active', locked_space_id: null, last_seen: '2026-02-07T09:30:00Z', created_at: '2026-01-20T10:00:00Z', has_active_tokens: true },
-  { client_id: 'claude-001', registration_type: 'dcr', client_name: 'Claude Desktop', client_alias: null, redirect_uris: ['http://localhost:9315/callback'], scope: null, approved: true, logo_uri: null, client_uri: null, software_id: 'claude-desktop', software_version: '1.2.0', metadata_url: null, metadata_cached_at: null, metadata_cache_ttl: null, connection_mode: 'follow_active', locked_space_id: null, last_seen: '2026-02-07T08:15:00Z', created_at: '2026-01-22T10:00:00Z', has_active_tokens: true },
-  { client_id: 'vscode-001', registration_type: 'dcr', client_name: 'VS Code Copilot', client_alias: null, redirect_uris: ['http://localhost:9315/callback'], scope: null, approved: true, logo_uri: null, client_uri: null, software_id: 'vscode', software_version: '1.96.0', metadata_url: null, metadata_cached_at: null, metadata_cache_ttl: null, connection_mode: 'locked', locked_space_id: SPACE_WORK.id, last_seen: '2026-02-06T14:00:00Z', created_at: '2026-01-25T10:00:00Z', has_active_tokens: true },
+  { client_id: 'vscode-001', registration_type: 'dcr', client_name: 'VS Code', client_alias: null, redirect_uris: ['http://localhost:9315/callback'], scope: null, approved: true, logo_uri: null, client_uri: null, software_id: 'vscode', software_version: '1.96.0', metadata_url: null, metadata_cached_at: null, metadata_cache_ttl: null, connection_mode: 'follow_active', locked_space_id: null, last_seen: '2026-02-07T08:45:00Z', created_at: '2026-01-22T10:00:00Z', has_active_tokens: true },
 ];
 
 function mkRegistry(id, name, desc, alias, icon, categories, auth, transportType, publisher, caps, hostingType, badges) {
@@ -166,18 +151,24 @@ function mkRegistry(id, name, desc, alias, icon, categories, auth, transportType
 }
 
 const REGISTRY_SERVERS = [
-  mkRegistry('github-mcp', 'GitHub', 'GitHub API integration — issues, PRs, repos, and code search', 'github', '🐙', ['developer-tools'], { type: 'api_key', instructions: null }, 'stdio', { name: 'Anthropic', domain: 'anthropic.com', verified: true, official: true }, { tools: true, resources: true, prompts: false }, 'local', ['official', 'verified']),
-  mkRegistry('slack-mcp', 'Slack', 'Send messages, search channels, and manage Slack workspaces', 'slack', '💬', ['productivity'], { type: 'oauth' }, 'http', { name: 'Slack', domain: 'slack.com', verified: true, official: true }, { tools: true, resources: false, prompts: true }, 'remote', ['official', 'verified']),
-  mkRegistry('postgres-mcp', 'PostgreSQL', 'Query databases, inspect schemas, and run SQL', 'postgres', '🐘', ['developer-tools'], { type: 'api_key', instructions: null }, 'stdio', { name: 'Anthropic', domain: 'anthropic.com', verified: true, official: true }, { tools: true, resources: true, prompts: false }, 'local', ['official']),
+  // Installed ones (will show "Installed" in discover) — IDs match INSTALLED_SERVERS
+  mkRegistry('github-mcp', 'GitHub', 'GitHub API integration — issues, PRs, repos, and code search', 'github', '🐙', ['developer-tools'], { type: 'api_key', instructions: null }, 'stdio', { name: 'Anthropic', domain: 'anthropic.com', verified: true, official: true }, { tools: true, resources: true, prompts: false }, 'local', ['official', 'verified', 'popular']),
+  mkRegistry('atlassian-mcp', 'Atlassian', 'Jira issues, Confluence pages, and project management', 'atlassian', '🔷', ['productivity'], { type: 'oauth' }, 'http', { name: 'Atlassian', domain: 'atlassian.com', verified: true, official: true }, { tools: true, resources: true, prompts: false }, 'remote', ['official', 'verified']),
+  mkRegistry('cloudflare-mcp', 'Cloudflare', 'Manage Workers, KV, R2, and DNS via Cloudflare API', 'cloudflare', '☁️', ['cloud'], { type: 'oauth' }, 'http', { name: 'Cloudflare', domain: 'cloudflare.com', verified: true, official: true }, { tools: true, resources: true, prompts: false }, 'remote', ['official', 'verified']),
+  mkRegistry('postgres-mcp', 'PostgreSQL', 'Query databases, inspect schemas, and run SQL', 'postgres', '🐘', ['developer-tools'], { type: 'api_key', instructions: null }, 'stdio', { name: 'Anthropic', domain: 'anthropic.com', verified: true, official: true }, { tools: true, resources: true, prompts: false }, 'local', ['official', 'popular']),
+  mkRegistry('azure-mcp', 'Azure DevOps', 'Azure DevOps work items, repos, and pipelines', 'azure', '🔵', ['cloud'], { type: 'oauth' }, 'http', { name: 'Microsoft', domain: 'microsoft.com', verified: true, official: true }, { tools: true, resources: true, prompts: false }, 'remote', ['official', 'verified']),
   mkRegistry('filesystem-mcp', 'Filesystem', 'Read, write, and search files on your local machine', 'filesystem', '📂', ['file-system'], { type: 'none' }, 'stdio', { name: 'Anthropic', domain: 'anthropic.com', verified: true, official: true }, { tools: true, resources: true, prompts: false }, 'local', ['official']),
-  mkRegistry('brave-search-mcp', 'Brave Search', 'Web and local search via Brave Search API', 'brave-search', '🔍', ['search'], { type: 'api_key', instructions: null }, 'stdio', { name: 'Anthropic', domain: 'anthropic.com', verified: true, official: true }, { tools: true, resources: false, prompts: false }, 'local', ['official']),
-  mkRegistry('memory-mcp', 'Memory', 'Persistent memory using a knowledge graph', 'memory', '🧠', ['developer-tools'], { type: 'none' }, 'stdio', { name: 'Anthropic', domain: 'anthropic.com', verified: true, official: true }, { tools: true, resources: false, prompts: false }, 'local', ['official']),
-  mkRegistry('puppeteer-mcp', 'Puppeteer', 'Browser automation — navigate, screenshot, and interact with web pages', 'puppeteer', '🎭', ['developer-tools'], { type: 'none' }, 'stdio', { name: 'Anthropic', domain: 'anthropic.com', verified: true, official: true }, { tools: true, resources: false, prompts: false }, 'local', []),
-  mkRegistry('gdrive-mcp', 'Google Drive', 'Search and read files from Google Drive', 'gdrive', '📁', ['cloud'], { type: 'oauth' }, 'stdio', { name: 'Anthropic', domain: 'anthropic.com', verified: true, official: true }, { tools: true, resources: true, prompts: false }, 'remote', ['official']),
+  // Not installed — popular servers in the registry
+  mkRegistry('slack-mcp', 'Slack', 'Send messages, search channels, and manage Slack workspaces', 'slack', '💬', ['productivity'], { type: 'oauth' }, 'http', { name: 'Slack', domain: 'slack.com', verified: true, official: true }, { tools: true, resources: false, prompts: true }, 'remote', ['official', 'verified', 'popular']),
+  mkRegistry('gdrive-mcp', 'Google Drive', 'Search and read files from Google Drive', 'gdrive', '📁', ['cloud'], { type: 'oauth' }, 'stdio', { name: 'Google', domain: 'google.com', verified: true, official: true }, { tools: true, resources: true, prompts: false }, 'remote', ['official', 'popular']),
+  mkRegistry('stripe-mcp', 'Stripe', 'Manage payments, subscriptions, and invoices', 'stripe', '💳', ['developer-tools'], { type: 'api_key', instructions: null }, 'http', { name: 'Stripe', domain: 'stripe.com', verified: true, official: true }, { tools: true, resources: false, prompts: false }, 'remote', ['official', 'verified']),
   mkRegistry('linear-mcp', 'Linear', 'Manage issues, projects, and teams in Linear', 'linear', '📐', ['productivity'], { type: 'api_key', instructions: null }, 'http', { name: 'Linear', domain: 'linear.app', verified: true, official: true }, { tools: true, resources: false, prompts: false }, 'remote', ['verified']),
-  mkRegistry('sentry-mcp', 'Sentry', 'Search and analyze errors and performance issues', 'sentry', '🔥', ['developer-tools'], { type: 'api_key', instructions: null }, 'stdio', { name: 'Sentry', domain: 'sentry.io', verified: true, official: false }, { tools: true, resources: false, prompts: false }, 'local', []),
-  mkRegistry('notion-mcp', 'Notion', 'Read and search Notion pages and databases', 'notion', '📝', ['productivity'], { type: 'api_key', instructions: null }, 'stdio', { name: 'Notion', domain: 'notion.so', verified: true, official: false }, { tools: true, resources: true, prompts: false }, 'local', ['verified']),
-  mkRegistry('cloudflare-mcp', 'Cloudflare', 'Manage Workers, KV, R2, and DNS via Cloudflare API', 'cloudflare', '☁️', ['cloud'], { type: 'oauth' }, 'http', { name: 'Cloudflare', domain: 'cloudflare.com', verified: true, official: true }, { tools: true, resources: false, prompts: false }, 'remote', ['official', 'verified']),
+  mkRegistry('sentry-mcp', 'Sentry', 'Search and analyze errors and performance issues', 'sentry', '🔥', ['developer-tools'], { type: 'api_key', instructions: null }, 'stdio', { name: 'Sentry', domain: 'sentry.io', verified: true, official: false }, { tools: true, resources: false, prompts: false }, 'local', ['verified']),
+  mkRegistry('notion-mcp', 'Notion', 'Read and search Notion pages and databases', 'notion', '📝', ['productivity'], { type: 'api_key', instructions: null }, 'stdio', { name: 'Notion', domain: 'notion.so', verified: true, official: false }, { tools: true, resources: true, prompts: false }, 'local', ['verified', 'popular']),
+  mkRegistry('datadog-mcp', 'Datadog', 'Monitor infrastructure, APM traces, and logs', 'datadog', '🐶', ['developer-tools'], { type: 'api_key', instructions: null }, 'http', { name: 'Datadog', domain: 'datadoghq.com', verified: true, official: true }, { tools: true, resources: true, prompts: false }, 'remote', ['official']),
+  mkRegistry('mongodb-mcp', 'MongoDB', 'Query collections, manage indexes, and run aggregations', 'mongodb', '🍃', ['developer-tools'], { type: 'api_key', instructions: null }, 'stdio', { name: 'MongoDB', domain: 'mongodb.com', verified: true, official: true }, { tools: true, resources: true, prompts: false }, 'local', ['official', 'verified']),
+  mkRegistry('puppeteer-mcp', 'Puppeteer', 'Browser automation — navigate, screenshot, and interact with web pages', 'puppeteer', '🎭', ['developer-tools'], { type: 'none' }, 'stdio', { name: 'Anthropic', domain: 'anthropic.com', verified: true, official: true }, { tools: true, resources: false, prompts: false }, 'local', ['official']),
+  mkRegistry('memory-mcp', 'Memory', 'Persistent memory using a knowledge graph', 'memory', '🧠', ['developer-tools'], { type: 'none' }, 'stdio', { name: 'Anthropic', domain: 'anthropic.com', verified: true, official: true }, { tools: true, resources: false, prompts: false }, 'local', ['official']),
 ];
 
 const REGISTRY_CATEGORIES = [
@@ -208,7 +199,7 @@ const UI_CONFIG = {
   items_per_page: 24,
 };
 
-const HOME_CONFIG = { featured_server_ids: ['github-mcp', 'slack-mcp', 'postgres-mcp', 'filesystem-mcp'] };
+const HOME_CONFIG = { featured_server_ids: ['github-mcp', 'slack-mcp', 'postgres-mcp', 'cloudflare-mcp', 'stripe-mcp', 'atlassian-mcp'] };
 
 // ── IPC Mock Handler ───────────────────────────────────────
 
@@ -237,7 +228,7 @@ function buildMockHandler() {
         case 'get_space': return SPACES.find(s => s.id === args?.id) || SPACES[0];
         case 'set_active_space': return null;
         case 'create_space': return { id: crypto.randomUUID(), name: args?.name, icon: args?.icon, description: null, is_default: false, sort_order: 3, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
-        case 'get_gateway_status': return { running: true, url: 'http://localhost:9315', active_sessions: 3, connected_backends: 4 };
+        case 'get_gateway_status': return { running: true, url: 'http://localhost:9315', active_sessions: 2, connected_backends: 6 };
         case 'start_gateway': return null;
         case 'stop_gateway': return null;
         case 'list_installed_servers': return INSTALLED;
@@ -249,7 +240,7 @@ function buildMockHandler() {
         case 'get_server_definition': return REGISTRY.find(s => s.id === args?.serverId);
         case 'install_server': return null;
         case 'uninstall_server': return null;
-        case 'get_server_statuses': return Object.values(STATUSES);
+        case 'get_server_statuses': return STATUSES;
         case 'list_server_features': return FEATURES;
         case 'list_server_features_by_server': return FEATURES.filter(f => f.server_id === args?.serverId);
         case 'list_server_features_by_type': return FEATURES.filter(f => f.feature_type === args?.featureType);
@@ -261,8 +252,8 @@ function buildMockHandler() {
         case 'get_all_client_grants': return {};
         case 'get_oauth_client_grants': return {};
         case 'refresh_oauth_tokens_on_startup': return { servers_checked: 2, tokens_refreshed: 1, refresh_failed: 0 };
-        case 'connect_all_enabled_servers': return { connected: 4, reused: 0, failed: 0, oauth_required: 0, errors: [] };
-        case 'get_pool_stats': return { total_instances: 4, connected_instances: 4, total_space_server_mappings: 5 };
+        case 'connect_all_enabled_servers': return { connected: 6, reused: 0, failed: 0, oauth_required: 0, errors: [] };
+        case 'get_pool_stats': return { total_instances: 6, connected_instances: 6, total_space_server_mappings: 6 };
         case 'get_server_logs': return [];
         case 'get_server_log_file': return '/home/user/.local/share/com.mcpmux.desktop/logs';
         case 'export_config': return '{}';
