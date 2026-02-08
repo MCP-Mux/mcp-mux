@@ -50,7 +50,7 @@ Add a server in McpMux and every client has it instantly. No files to edit.
   "mcpServers": {
     "mcpmux": {
       "type": "http",
-      "url": "http://localhost:9315/mcp"
+      "url": "http://localhost:45818/mcp"
     }
   }
 }
