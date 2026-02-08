@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.8](https://github.com/MCP-Mux/mcp-mux/compare/v0.0.7...v0.0.8) (2026-02-08)
+
+
+### Documentation
+
+* add comprehensive light-theme screenshots for all features ([#47](https://github.com/MCP-Mux/mcp-mux/issues/47)) ([cefa644](https://github.com/MCP-Mux/mcp-mux/commit/cefa644daad6c23640db6bc767eb1dd0e43199f0))
+* comprehensive README rewrite with features, security, and archi… ([#44](https://github.com/MCP-Mux/mcp-mux/issues/44)) ([243d3a3](https://github.com/MCP-Mux/mcp-mux/commit/243d3a369f34cfb02c5e82085e90c68e5bed963d))
+
 ## [0.0.7](https://github.com/MCP-Mux/mcp-mux/compare/v0.0.6...v0.0.7) (2026-02-07)
 
 
