@@ -1420,6 +1420,7 @@ export function ServersPage() {
                       />
                       <button
                         onClick={() => {
+                          // eslint-disable-next-line @typescript-eslint/no-unused-vars
                           const { [key]: _, ...rest } = configModal.envOverrides;
                           setConfigModal({ ...configModal, envOverrides: rest });
                         }}
@@ -1485,6 +1486,7 @@ export function ServersPage() {
                         />
                         <button
                           onClick={() => {
+                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
                             const { [key]: _, ...rest } = configModal.extraHeaders;
                             setConfigModal({ ...configModal, extraHeaders: rest });
                           }}

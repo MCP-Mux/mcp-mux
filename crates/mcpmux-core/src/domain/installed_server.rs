@@ -247,10 +247,7 @@ mod tests {
             server.env_overrides.get("NODE_ENV"),
             Some(&"production".to_string())
         );
-        assert_eq!(
-            server.env_overrides.get("DEBUG"),
-            Some(&"true".to_string())
-        );
+        assert_eq!(server.env_overrides.get("DEBUG"), Some(&"true".to_string()));
     }
 
     #[test]
@@ -307,7 +304,10 @@ mod tests {
         let deserialized: InstalledServer =
             serde_json::from_str(&json).expect("Failed to deserialize");
 
-        assert_eq!(deserialized.env_overrides.get("KEY"), Some(&"value".to_string()));
+        assert_eq!(
+            deserialized.env_overrides.get("KEY"),
+            Some(&"value".to_string())
+        );
         assert_eq!(deserialized.args_append, vec!["--flag".to_string()]);
         assert_eq!(
             deserialized.extra_headers.get("X-Test"),
@@ -351,7 +351,10 @@ mod tests {
         // Serialize and deserialize
         let json = serde_json::to_string(&server).expect("serialize");
         let deserialized: InstalledServer = serde_json::from_str(&json).expect("deserialize");
-        assert_eq!(deserialized.env_overrides.get(""), Some(&"value".to_string()));
+        assert_eq!(
+            deserialized.env_overrides.get(""),
+            Some(&"value".to_string())
+        );
     }
 
     #[test]
@@ -365,10 +368,7 @@ mod tests {
             .insert("KEY".to_string(), "second".to_string());
 
         assert_eq!(server.env_overrides.len(), 1);
-        assert_eq!(
-            server.env_overrides.get("KEY"),
-            Some(&"second".to_string())
-        );
+        assert_eq!(server.env_overrides.get("KEY"), Some(&"second".to_string()));
     }
 
     #[test]

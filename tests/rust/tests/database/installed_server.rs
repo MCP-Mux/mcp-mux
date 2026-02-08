@@ -431,10 +431,7 @@ async fn test_installed_server_env_overrides_persist() {
         loaded.env_overrides.get("NODE_ENV"),
         Some(&"production".to_string())
     );
-    assert_eq!(
-        loaded.env_overrides.get("DEBUG"),
-        Some(&"true".to_string())
-    );
+    assert_eq!(loaded.env_overrides.get("DEBUG"), Some(&"true".to_string()));
 }
 
 #[tokio::test]

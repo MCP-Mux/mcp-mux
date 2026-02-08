@@ -145,7 +145,14 @@ pub async fn save_server_inputs(
     let space_uuid = uuid::Uuid::parse_str(&space_id).map_err(|e| e.to_string())?;
 
     service
-        .update_config(space_uuid, &id, input_values, env_overrides, args_append, extra_headers)
+        .update_config(
+            space_uuid,
+            &id,
+            input_values,
+            env_overrides,
+            args_append,
+            extra_headers,
+        )
         .await
         .map_err(|e| e.to_string())
 }
