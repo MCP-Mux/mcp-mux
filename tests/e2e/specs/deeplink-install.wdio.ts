@@ -214,16 +214,19 @@ describe('Deep Link Install - Valid Server', () => {
 describe('Deep Link Install - Invalid Server', () => {
   it('TC-DL-006: Deep link with unknown server ID shows error', async () => {
     await simulateInstallDeepLink('nonexistent-server-12345');
-    await browser.pause(3000);
+
+    // Wait for the error modal to appear (loading -> error can take time)
+    const errorModal = await byTestId('install-modal-error');
+    const appeared = await errorModal
+      .waitForDisplayed({ timeout: TIMEOUT.long })
+      .then(() => true)
+      .catch(() => false);
 
     await browser.saveScreenshot(
       './tests/e2e/screenshots/dl-06-not-found.png'
     );
 
-    const errorModal = await byTestId('install-modal-error');
-    const isDisplayed = await errorModal.isDisplayed().catch(() => false);
-
-    if (isDisplayed) {
+    if (appeared) {
       // Error message should mention the server was not found
       const errorMsg = await byTestId('install-modal-error-message');
       const text = await errorMsg.getText().catch(() => '');
@@ -235,7 +238,7 @@ describe('Deep Link Install - Invalid Server', () => {
       await browser.pause(1000);
       await waitForModalClose();
     } else {
-      // On slow CI, check page source
+      // Fallback: check page source for error text
       const pageSource = await browser.getPageSource();
       const hasError =
         pageSource.includes('not found') ||

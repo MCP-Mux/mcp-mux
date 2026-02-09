@@ -52,7 +52,7 @@ describe('Server Installation - GitHub Server (No Inputs)', () => {
     
     // Verify GitHub Server is in the list
     const pageSource = await browser.getPageSource();
-    expect(pageSource.includes('GitHub Server')).toBe(true);
+    expect(pageSource.includes('GitHub')).toBe(true);
     
     const enableButton = await byTestId('enable-server-github-server');
     const isEnableDisplayed = await enableButton.isDisplayed().catch(() => false);

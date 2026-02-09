@@ -61,11 +61,11 @@ describe('Server Configuration - PostgreSQL', () => {
   });
 
   it('TC-SC-002b: Enter connection string and save configuration', async () => {
-    const apiKeyInput = await byTestId('config-input-API_KEY');
-    const isInputDisplayed = await apiKeyInput.isDisplayed().catch(() => false);
-    
+    const configInput = await byTestId('config-input-DATABASE_URL');
+    const isInputDisplayed = await configInput.isDisplayed().catch(() => false);
+
     if (isInputDisplayed) {
-      await apiKeyInput.setValue('test_api_key_12345');
+      await configInput.setValue('postgresql://test:test@localhost:5432/testdb');
       await browser.pause(500);
       
       await browser.saveScreenshot('./tests/e2e/screenshots/sc-04-entered-key.png');
