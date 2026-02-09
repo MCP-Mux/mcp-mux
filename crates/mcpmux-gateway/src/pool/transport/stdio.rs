@@ -125,6 +125,16 @@ impl Transport for StdioTransport {
                     .stderr(Stdio::piped()) // Capture stderr for logging
                     .kill_on_drop(true);
 
+                // On Windows, prevent console window from appearing for child processes.
+                // In release builds the app uses `windows_subsystem = "windows"` (GUI subsystem),
+                // which causes Windows to allocate a new visible console for any spawned
+                // console-subsystem child process. CREATE_NO_WINDOW suppresses this.
+                #[cfg(windows)]
+                {
+                    const CREATE_NO_WINDOW: u32 = 0x08000000;
+                    cmd.creation_flags(CREATE_NO_WINDOW);
+                }
+
                 // Note: We can't easily access stderr after TokioChildProcess wraps it
                 // This is a limitation of the current rmcp API
                 // For now, we log connection events only
