@@ -40,6 +40,35 @@ import {
 const CLOUDFLARE_SERVER_ID = 'cloudflare-server';
 const STUB_HTTP_PORT = 3457;
 
+/**
+ * Parse an MCP Streamable HTTP response that may be either JSON or SSE format.
+ *
+ * Per the MCP spec (2025-03-26), when a POST contains JSON-RPC requests, the
+ * server MUST respond with either `Content-Type: application/json` (single JSON
+ * object) or `Content-Type: text/event-stream` (SSE stream). The client MUST
+ * support both cases.
+ *
+ * SSE responses contain `data:` lines with JSON-RPC messages. We extract the
+ * first JSON-RPC response message from the stream.
+ */
+function parseMcpResponse<T>(contentType: string | null, responseText: string): T {
+  if (contentType?.includes('text/event-stream')) {
+    // Parse SSE: extract JSON from `data:` lines
+    const lines = responseText.split('\n');
+    for (const line of lines) {
+      if (line.startsWith('data:')) {
+        const data = line.slice('data:'.length).trim();
+        if (data) {
+          return JSON.parse(data) as T;
+        }
+      }
+    }
+    throw new Error(`No data events found in SSE response: ${responseText.substring(0, 500)}`);
+  }
+  // Default: parse as plain JSON
+  return JSON.parse(responseText) as T;
+}
+
 // ============================================================================
 // Test Suite: Streamable HTTP Transport & Notifications
 // ============================================================================
@@ -372,6 +401,7 @@ describe('Streamable HTTP: OAuth MCP Client Flow', function () {
     });
 
     console.log('[test] Initialize response status:', res.status, res.statusText);
+    console.log('[test] Initialize response content-type:', res.headers.get('content-type'));
     const responseText = await res.text();
     console.log('[test] Initialize response body:', responseText.substring(0, 1000));
 
@@ -381,7 +411,8 @@ describe('Streamable HTTP: OAuth MCP Client Flow', function () {
     }
     expect(res.status).toBeLessThan(400);
 
-    const body = JSON.parse(responseText) as {
+    // The server may respond with JSON or SSE (per MCP Streamable HTTP spec)
+    const body = parseMcpResponse<{
       jsonrpc: string;
       id: number;
       result?: {
@@ -393,7 +424,7 @@ describe('Streamable HTTP: OAuth MCP Client Flow', function () {
         };
         serverInfo: { name: string; version: string };
       };
-    };
+    }>(res.headers.get('content-type'), responseText);
 
     console.log('[test] Initialize result:', JSON.stringify(body));
 
@@ -447,12 +478,16 @@ describe('Streamable HTTP: OAuth MCP Client Flow', function () {
     });
 
     console.log('[test] Session init status:', initRes.status, initRes.statusText);
+    console.log('[test] Session init content-type:', initRes.headers.get('content-type'));
     const initText = await initRes.text();
     console.log('[test] Session init body:', initText.substring(0, 1000));
     if (!initRes.ok) {
       console.log('[test] FAILURE: /mcp returned', initRes.status, '- body:', initText);
     }
     expect(initRes.status).toBeLessThan(400);
+
+    // Parse the response (may be JSON or SSE per spec)
+    parseMcpResponse<{ jsonrpc: string; id: number }>(initRes.headers.get('content-type'), initText);
 
     // Check for Mcp-Session-Id in response headers
     const sessionId = initRes.headers.get('mcp-session-id');
@@ -496,9 +531,12 @@ describe('Streamable HTTP: OAuth MCP Client Flow', function () {
     });
 
     expect(toolsRes.ok).toBe(true);
-    const toolsBody = await toolsRes.json() as {
+    console.log('[test] Tools response content-type:', toolsRes.headers.get('content-type'));
+    const toolsText = await toolsRes.text();
+    console.log('[test] Tools response body:', toolsText.substring(0, 1000));
+    const toolsBody = parseMcpResponse<{
       result?: { tools: Array<{ name: string; description?: string }> };
-    };
+    }>(toolsRes.headers.get('content-type'), toolsText);
 
     console.log('[test] Tools count:', toolsBody.result?.tools?.length ?? 0);
     if (toolsBody.result?.tools && toolsBody.result.tools.length > 0) {
