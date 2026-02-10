@@ -19,6 +19,29 @@ use uuid::Uuid;
 use super::TransportType;
 use super::{create_client_handler, Transport, TransportConnectResult};
 
+/// Apply platform-specific flags to a child process command.
+///
+/// - **Windows**: Sets `CREATE_NO_WINDOW` (`0x08000000`) so the child process does not
+///   allocate a visible console window. Required because release builds use
+///   `windows_subsystem = "windows"` (GUI subsystem) and Windows would otherwise create
+///   a new console for every spawned console-subsystem child.
+///
+/// - **Unix (macOS / Linux)**: Calls `process_group(0)` to place the child in its own
+///   process group, preventing terminal signals (`SIGINT`, `SIGTSTP`) sent to the parent
+///   from propagating to MCP server child processes.
+pub fn configure_child_process_platform(cmd: &mut Command) {
+    #[cfg(windows)]
+    {
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        cmd.process_group(0);
+    }
+}
+
 /// STDIO transport for child process MCP servers
 pub struct StdioTransport {
     command: String,
@@ -125,15 +148,7 @@ impl Transport for StdioTransport {
                     .stderr(Stdio::piped()) // Capture stderr for logging
                     .kill_on_drop(true);
 
-                // On Windows, prevent console window from appearing for child processes.
-                // In release builds the app uses `windows_subsystem = "windows"` (GUI subsystem),
-                // which causes Windows to allocate a new visible console for any spawned
-                // console-subsystem child process. CREATE_NO_WINDOW suppresses this.
-                #[cfg(windows)]
-                {
-                    const CREATE_NO_WINDOW: u32 = 0x08000000;
-                    cmd.creation_flags(CREATE_NO_WINDOW);
-                }
+                configure_child_process_platform(cmd);
 
                 // Note: We can't easily access stderr after TokioChildProcess wraps it
                 // This is a limitation of the current rmcp API
