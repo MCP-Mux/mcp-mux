@@ -21,17 +21,12 @@ import {
   enableServerV2,
   disableServerV2,
   listInstalledServers,
-  createClient,
-  listClients,
-  listFeatureSetsBySpace,
-  grantFeatureSetToClient,
   refreshRegistry,
   approveOAuthClient,
 } from '../helpers/tauri-api';
 import {
   registerOAuthClient,
   obtainAccessToken,
-  waitForGateway,
 } from '../helpers/mcp-client';
 import {
   triggerToolsChanged,
