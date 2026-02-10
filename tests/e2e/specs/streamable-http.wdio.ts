@@ -348,10 +348,12 @@ describe('Streamable HTTP: OAuth MCP Client Flow', function () {
     console.log('[test] Token obtained, length:', token.length);
 
     // Send MCP initialize request
+    // Streamable HTTP requires Accept: application/json, text/event-stream
     const res = await fetch(`http://localhost:${gatewayPort}/mcp`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json, text/event-stream',
         'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
@@ -429,6 +431,7 @@ describe('Streamable HTTP: OAuth MCP Client Flow', function () {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json, text/event-stream',
         'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
@@ -461,6 +464,7 @@ describe('Streamable HTTP: OAuth MCP Client Flow', function () {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json, text/event-stream',
         'Authorization': `Bearer ${token}`,
         'Mcp-Session-Id': sessionId!,
       },
@@ -479,6 +483,7 @@ describe('Streamable HTTP: OAuth MCP Client Flow', function () {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json, text/event-stream',
         'Authorization': `Bearer ${token}`,
         'Mcp-Session-Id': sessionId!,
       },
