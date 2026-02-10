@@ -37,7 +37,6 @@ pub fn configure_child_process_platform(cmd: &mut Command) {
     }
     #[cfg(unix)]
     {
-        use std::os::unix::process::CommandExt;
         cmd.process_group(0);
     }
 }

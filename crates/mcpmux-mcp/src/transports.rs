@@ -162,7 +162,6 @@ impl McpSession {
                 }
                 #[cfg(unix)]
                 {
-                    use std::os::unix::process::CommandExt;
                     cmd.process_group(0);
                 }
             })
