@@ -7,7 +7,7 @@
  * Uses data-testid only (ADR-003).
  */
 
-import { byTestId, TIMEOUT, waitForModalClose } from '../helpers/selectors';
+import { byTestId, TIMEOUT } from '../helpers/selectors';
 import {
   getActiveSpace,
   installServer,
