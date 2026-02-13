@@ -316,8 +316,7 @@ impl Transport for StdioTransport {
             self.server_id.clone(),
         );
 
-        self.connect_with_stderr(&command_path, stderr_write)
-            .await
+        self.connect_with_stderr(&command_path, stderr_write).await
     }
 
     fn transport_type(&self) -> TransportType {
