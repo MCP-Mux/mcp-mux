@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { WelcomeGuide, WELCOME_STEPS } from '../../../apps/desktop/src/components/WelcomeGuide';
+import { WelcomeGuide } from '../../../apps/desktop/src/components/WelcomeGuide';
+import { WELCOME_STEPS } from '../../../apps/desktop/src/components/welcomeSteps';
 import { useAppStore } from '../../../apps/desktop/src/stores/appStore';
 
 describe('WelcomeGuide', () => {
