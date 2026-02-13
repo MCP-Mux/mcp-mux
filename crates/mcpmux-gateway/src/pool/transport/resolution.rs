@@ -183,10 +183,7 @@ mod tests {
         let transport = RegistryConfig::Stdio {
             command: "node".to_string(),
             args: vec!["server.js".to_string()],
-            env: HashMap::from([(
-                "LOG_LEVEL".to_string(),
-                "${input:LOG_LEVEL}".to_string(),
-            )]),
+            env: HashMap::from([("LOG_LEVEL".to_string(), "${input:LOG_LEVEL}".to_string())]),
             metadata: TransportMetadata {
                 inputs: vec![make_input("LOG_LEVEL", Some("info"))],
             },
@@ -210,10 +207,7 @@ mod tests {
         let transport = RegistryConfig::Stdio {
             command: "node".to_string(),
             args: vec![],
-            env: HashMap::from([(
-                "LOG_LEVEL".to_string(),
-                "${input:LOG_LEVEL}".to_string(),
-            )]),
+            env: HashMap::from([("LOG_LEVEL".to_string(), "${input:LOG_LEVEL}".to_string())]),
             metadata: TransportMetadata {
                 inputs: vec![make_input("LOG_LEVEL", Some("info"))],
             },
@@ -239,10 +233,7 @@ mod tests {
     fn test_default_resolves_in_args() {
         let transport = RegistryConfig::Stdio {
             command: "node".to_string(),
-            args: vec![
-                "--port".to_string(),
-                "${input:PORT}".to_string(),
-            ],
+            args: vec!["--port".to_string(), "${input:PORT}".to_string()],
             env: HashMap::new(),
             metadata: TransportMetadata {
                 inputs: vec![make_input("PORT", Some("8080"))],
@@ -311,10 +302,7 @@ mod tests {
     fn test_default_resolves_in_http_headers() {
         let transport = RegistryConfig::Http {
             url: "https://api.example.com/mcp".to_string(),
-            headers: HashMap::from([(
-                "X-Api-Key".to_string(),
-                "${input:API_KEY}".to_string(),
-            )]),
+            headers: HashMap::from([("X-Api-Key".to_string(), "${input:API_KEY}".to_string())]),
             metadata: TransportMetadata {
                 inputs: vec![make_input("API_KEY", Some("default-key"))],
             },
@@ -377,10 +365,7 @@ mod tests {
         let transport = RegistryConfig::Stdio {
             command: "node".to_string(),
             args: vec![],
-            env: HashMap::from([(
-                "API_KEY".to_string(),
-                "${input:API_KEY}".to_string(),
-            )]),
+            env: HashMap::from([("API_KEY".to_string(), "${input:API_KEY}".to_string())]),
             metadata: TransportMetadata {
                 inputs: vec![make_input("API_KEY", None)],
             },
