@@ -1,9 +1,11 @@
 # McpMux
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![GitHub release](https://img.shields.io/github/v/release/MCP-Mux/mcp-mux)](https://github.com/MCP-Mux/mcp-mux/releases)
+[![GitHub release](https://img.shields.io/github/v/release/ion-ash/mcp-mux)](https://github.com/ion-ash/mcp-mux/releases)
 
 ### Configure your MCP servers once. Connect every AI client.
+
+**[Website](https://mcpmux.com)** · **[Download](https://mcpmux.com/download)** · **[Discover Servers](https://mcpmux.com)** · **[Features](https://mcpmux.com/features)**
 
 ![McpMux Dashboard](docs/screenshots/dashboard.png)
 
@@ -72,7 +74,7 @@ Add, remove, and monitor all your MCP servers in one place. See connection statu
 
 ### Server Registry
 
-Browse and one-click install from a curated registry of MCP servers. Filter by category, auth type, or hosting. Cached for offline use.
+Browse and one-click install from a curated registry of MCP servers. Filter by category, auth type, or hosting. Cached for offline use. You can also browse the full registry at [mcpmux.com](https://mcpmux.com).
 
 ![Discover Servers](docs/screenshots/discover.png)
 
@@ -120,9 +122,9 @@ All MCP traffic stays on your machine. Cloud sync (optional) only covers config 
 
 ## Getting Started
 
-**1. [Download McpMux](https://github.com/MCP-Mux/mcp-mux/releases)** — Windows (MSI), macOS (DMG), Linux (DEB/RPM/AppImage)
+**1. [Download McpMux](https://mcpmux.com/download)** — Windows (MSI), macOS (DMG), Linux (DEB/RPM/AppImage)
 
-**2. Add servers** — Discover tab to browse the registry, or add manually
+**2. Add servers** — Discover tab to browse the registry, or [explore servers on mcpmux.com](https://mcpmux.com) and install with one click
 
 **3. Paste config** — Copy the snippet from the Dashboard into your AI clients
 
@@ -159,6 +161,13 @@ mcp-mux/
 ```
 
 </details>
+
+## Links
+
+- **Website & Server Discovery** — [mcpmux.com](https://mcpmux.com)
+- **Download** — [mcpmux.com/download](https://mcpmux.com/download)
+- **Features** — [mcpmux.com/features](https://mcpmux.com/features)
+- **Server Definitions Repo** — [github.com/ion-ash/mcp-servers](https://github.com/ion-ash/mcp-servers)
 
 ## Contributing
 
