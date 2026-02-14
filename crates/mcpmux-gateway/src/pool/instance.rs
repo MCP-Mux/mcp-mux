@@ -77,7 +77,10 @@ impl McpClientHandler {
             LoggingLevel::Debug => LogLevel::Debug,
             LoggingLevel::Info | LoggingLevel::Notice => LogLevel::Info,
             LoggingLevel::Warning => LogLevel::Warn,
-            LoggingLevel::Error | LoggingLevel::Critical | LoggingLevel::Alert | LoggingLevel::Emergency => LogLevel::Error,
+            LoggingLevel::Error
+            | LoggingLevel::Critical
+            | LoggingLevel::Alert
+            | LoggingLevel::Emergency => LogLevel::Error,
         }
     }
 }
