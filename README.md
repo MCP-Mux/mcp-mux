@@ -78,6 +78,10 @@ Stop hunting for MCP server repos and hand-writing transport configs. Browse a c
 
 ![Discover — browse 100+ servers and install with one click](docs/screenshots/discover.png)
 
+The full registry is also available on the web at [mcpmux.com](https://mcpmux.com) — with search, categories, and one-click install via deep links.
+
+![mcpmux.com — server registry on the web](docs/screenshots/discover-web.png)
+
 ### Workspaces That Keep Things Separate
 
 Create isolated Spaces — each with their own servers, credentials, and permissions. A "Work" space for company databases and internal APIs. A "Personal" space for side projects. Switch in one click from the sidebar and every connected AI client follows automatically. No more accidentally querying your personal database from a work project.
