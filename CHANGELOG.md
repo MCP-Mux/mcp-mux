@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/mcpmux/mcp-mux/compare/v0.1.0...v0.1.1) (2026-02-16)
+
+
+### Bug Fixes
+
+* don't pass APPLE_CERTIFICATE to tauri-action ([1943134](https://github.com/mcpmux/mcp-mux/commit/19431347c63eba3ed00b408d3e6c044bd3ac8a9c))
+
 ## [0.1.0](https://github.com/mcpmux/mcp-mux/compare/v0.0.1...v0.1.0) (2026-02-16)
 
 First public release of McpMux — the unified MCP gateway and manager for AI clients.
