@@ -199,18 +199,31 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
     steps:
+      # Normalize the tag: ensure it starts with "v" whether the user
+      # typed "0.1.1" or "v0.1.1" in the workflow_dispatch input.
+      - name: Resolve tag
+        id: resolve
+        run: |
+          RAW="${{ inputs.tag || needs.release-please.outputs.tag_name }}"
+          TAG="${RAW#v}"       # strip leading v if present
+          TAG="v${TAG}"        # re-add it consistently
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
       - name: Validate existing release has assets
         if: inputs.tag != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          ASSET_COUNT=$(gh release view "${{ inputs.tag }}" \
+          TAG="${{ steps.resolve.outputs.tag }}"
+          ASSET_COUNT=$(gh release view "$TAG" \
             --repo "${{ github.repository }}" \
             --json assets --jq '.assets | length')
-          echo "Release ${{ inputs.tag }} has $ASSET_COUNT asset(s)"
+          echo "Release $TAG has $ASSET_COUNT asset(s)"
           if [ "$ASSET_COUNT" -eq 0 ]; then
-            echo "::error::Release ${{ inputs.tag }} has no assets to sign"
+            echo "::error::Release $TAG has no assets to sign"
             exit 1
           fi
 
@@ -221,7 +234,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="${{ inputs.tag || needs.release-please.outputs.tag_name }}"
+          TAG="${{ steps.resolve.outputs.tag }}"
           REPO="${{ github.repository }}"
           mkdir -p artifacts sigs
 
@@ -246,7 +259,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release edit "${{ inputs.tag || needs.release-please.outputs.tag_name }}" \
+          gh release edit "${{ steps.resolve.outputs.tag }}" \
             --draft=false \
             --repo "${{ github.repository }}"
 
@@ -266,7 +279,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
-          TAG="${{ inputs.tag || needs.release-please.outputs.tag_name }}"
+          TAG="${{ needs.publish-release.outputs.tag || needs.release-please.outputs.tag_name }}"
           VERSION="${TAG#v}"
           BASE_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}"
 
@@ -363,7 +376,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${{ inputs.tag || needs.release-please.outputs.tag_name }}"
+          TAG="${{ needs.publish-release.outputs.tag || needs.release-please.outputs.tag_name }}"
           mkdir -p artifacts
           # Download all .deb files from the release
           gh release download "$TAG" --pattern "*.deb" --dir artifacts
