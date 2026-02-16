@@ -189,6 +189,34 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Import GPG signing key
+        run: echo "${{ secrets.APT_GPG_PRIVATE_KEY }}" | gpg --batch --import
+
+      - name: Sign release artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ needs.release-please.outputs.tag_name }}"
+          REPO="${{ github.repository }}"
+          mkdir -p artifacts sigs
+
+          # Download all release assets (installers only, skip Tauri updater metadata)
+          gh release download "$TAG" --dir artifacts --repo "$REPO" \
+            --pattern "*.deb" --pattern "*.rpm" --pattern "*.AppImage" \
+            --pattern "*.dmg" --pattern "*.exe" --pattern "*.msi" \
+            --pattern "*.nsis.zip" || true
+
+          # Create detached signatures and upload
+          for file in artifacts/*; do
+            [ -f "$file" ] || continue
+            gpg --batch --yes --detach-sign --armor -o "sigs/$(basename "$file").sig" "$file"
+          done
+
+          # Upload all .sig files to the release
+          if ls sigs/*.sig &>/dev/null; then
+            gh release upload "$TAG" sigs/*.sig --repo "$REPO"
+          fi
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}

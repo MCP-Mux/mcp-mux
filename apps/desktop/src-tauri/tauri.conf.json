@@ -1,6 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "McpMux",
+  "mainBinaryName": "mcpmux",
   "version": "0.1.0",
   "identifier": "com.mcpmux.desktop",
   "build": {
@@ -87,17 +88,21 @@
       "deb": {
         "section": "utils",
         "depends": [
-          "libsecret-1-0",
-          "gnome-keyring",
           "librsvg2-2"
+        ],
+        "recommends": [
+          "libsecret-1-0",
+          "gnome-keyring"
         ],
         "desktopTemplate": "linux/mcpmux.desktop"
       },
       "rpm": {
         "depends": [
-          "libsecret",
-          "gnome-keyring",
           "librsvg2"
+        ],
+        "recommends": [
+          "libsecret",
+          "gnome-keyring"
         ]
       }
     }
