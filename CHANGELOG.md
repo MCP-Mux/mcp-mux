@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.14](https://github.com/mcpmux/mcp-mux/compare/v0.0.13...v0.0.14) (2026-02-16)
+
+
+### Bug Fixes
+
+* gracefully handle invalid Apple certificate in release builds ([bb4221f](https://github.com/mcpmux/mcp-mux/commit/bb4221f9e4a47ff7fad041b13e432a2ed55e1f96))
+* skip Apple certificate in tauri-action when import fails ([968d4b9](https://github.com/mcpmux/mcp-mux/commit/968d4b90b09bffc9a2432a32f2318ffde3facb88))
+
 ## [0.0.13](https://github.com/mcpmux/mcp-mux/compare/v0.0.1...v0.0.13) (2026-02-16)
 
 First public release of McpMux — the unified MCP gateway and manager for AI clients.
