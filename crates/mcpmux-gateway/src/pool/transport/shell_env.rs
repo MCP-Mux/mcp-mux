@@ -153,6 +153,8 @@ fn merge_paths(primary: &str, secondary: &str) -> String {
 mod tests {
     use super::*;
 
+    // ── merge_paths tests ──────────────────────────────────────────
+
     #[cfg(unix)]
     #[test]
     fn test_merge_paths_deduplicates() {
@@ -183,6 +185,36 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
+    fn test_merge_paths_empty_primary() {
+        let result = merge_paths("", "/a:/b");
+        assert_eq!(result, "/a:/b");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_merge_paths_both_empty() {
+        let result = merge_paths("", "");
+        assert_eq!(result, "");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_merge_paths_identical() {
+        let result = merge_paths("/a:/b:/c", "/a:/b:/c");
+        assert_eq!(result, "/a:/b:/c");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_merge_paths_many_duplicates() {
+        let result = merge_paths("/a:/b:/c:/d", "/d:/c:/b:/a:/e");
+        assert_eq!(result, "/a:/b:/c:/d:/e");
+    }
+
+    // ── get_shell_path tests ───────────────────────────────────────
+
+    #[cfg(unix)]
+    #[test]
     fn test_get_shell_path_returns_something() {
         // On any Unix system with a shell, this should succeed
         let path = get_shell_path();
@@ -193,5 +225,88 @@ mod tests {
             "PATH should contain standard directories: {}",
             path_str
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_get_shell_path_is_cached() {
+        // Calling twice should return the exact same reference (OnceLock)
+        let first = get_shell_path();
+        let second = get_shell_path();
+        assert!(first.is_some());
+        assert!(second.is_some());
+        // Same pointer — verifies caching via OnceLock
+        assert!(std::ptr::eq(first.unwrap(), second.unwrap()));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_get_shell_path_has_no_trailing_newline() {
+        let path = get_shell_path();
+        if let Some(p) = path {
+            let s = p.to_string_lossy();
+            assert!(
+                !s.ends_with('\n') && !s.ends_with('\r'),
+                "PATH should not have trailing newlines: {:?}",
+                s
+            );
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_get_shell_path_entries_are_not_empty() {
+        let path = get_shell_path();
+        if let Some(p) = path {
+            let s = p.to_string_lossy();
+            for entry in s.split(':') {
+                assert!(
+                    !entry.is_empty(),
+                    "PATH should not contain empty entries: {:?}",
+                    s
+                );
+            }
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_get_shell_path_is_valid_utf8() {
+        let path = get_shell_path();
+        if let Some(p) = path {
+            assert!(p.to_str().is_some(), "PATH should be valid UTF-8: {:?}", p);
+        }
+    }
+
+    // ── try_resolve_path_from_shell tests ──────────────────────────
+
+    #[cfg(unix)]
+    #[test]
+    fn test_try_resolve_shell_with_login_flag() {
+        // /bin/sh should work with -l -c
+        let result = try_resolve_path_from_shell("/bin/sh", &["-l", "-c"]);
+        assert!(result.is_some(), "Should resolve PATH from /bin/sh -l -c");
+        let path = result.unwrap();
+        assert!(!path.is_empty(), "PATH should not be empty");
+        assert!(
+            path.contains("/bin") || path.contains("/usr"),
+            "PATH should contain standard dirs: {}",
+            path
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_try_resolve_shell_nonexistent_shell() {
+        let result = try_resolve_path_from_shell("/nonexistent/shell_binary_xyz", &["-l", "-c"]);
+        assert!(result.is_none(), "Should fail for nonexistent shell");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_try_resolve_shell_invalid_flags() {
+        // --bogus-flag should cause the shell to error
+        let result = try_resolve_path_from_shell("/bin/sh", &["--bogus-flag-xyz", "-c"]);
+        assert!(result.is_none(), "Should fail with invalid shell flags");
     }
 }

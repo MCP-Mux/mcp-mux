@@ -343,3 +343,186 @@ fn inject_shell_path(env: &mut HashMap<String, String>, shell_path: Option<&std:
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::OsString;
+
+    // ── resolve_command tests ──────────────────────────────────────
+
+    #[test]
+    fn test_resolve_command_finds_sh_with_shell_path() {
+        // /bin/sh exists on every Unix system
+        #[cfg(unix)]
+        {
+            let path = OsString::from("/bin:/usr/bin");
+            let result = resolve_command("sh", Some(&path));
+            assert!(result.is_ok(), "Should find 'sh' in /bin:/usr/bin");
+        }
+    }
+
+    #[test]
+    fn test_resolve_command_finds_command_without_shell_path() {
+        // Without shell_path, falls back to which::which (uses process PATH)
+        #[cfg(unix)]
+        {
+            let result = resolve_command("sh", None);
+            assert!(result.is_ok(), "Should find 'sh' via process PATH");
+        }
+    }
+
+    #[test]
+    fn test_resolve_command_returns_error_for_nonexistent() {
+        let fake_path = OsString::from("/nonexistent/path");
+        let result = resolve_command("this_command_surely_does_not_exist_xyz", Some(&fake_path));
+        assert!(result.is_err(), "Should fail for nonexistent command");
+    }
+
+    #[test]
+    fn test_resolve_command_not_found_in_restricted_path() {
+        // Even if 'sh' exists, it shouldn't be found if PATH points elsewhere
+        let path = OsString::from("/tmp/empty_dir_that_does_not_exist");
+        let result = resolve_command("sh", Some(&path));
+        assert!(
+            result.is_err(),
+            "Should not find 'sh' in a path that doesn't contain it"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_resolve_command_with_full_shell_path() {
+        // Use the actual shell-resolved PATH to find a real command
+        if let Some(shell_path) = shell_env::get_shell_path() {
+            let result = resolve_command("sh", Some(shell_path));
+            assert!(result.is_ok(), "Should find 'sh' using resolved shell PATH");
+        }
+    }
+
+    // ── inject_shell_path tests ────────────────────────────────────
+
+    #[test]
+    fn test_inject_shell_path_adds_when_missing() {
+        let mut env = HashMap::new();
+        env.insert("FOO".to_string(), "bar".to_string());
+
+        let path = OsString::from("/usr/bin:/usr/local/bin");
+        inject_shell_path(&mut env, Some(&path));
+
+        assert_eq!(
+            env.get("PATH"),
+            Some(&"/usr/bin:/usr/local/bin".to_string()),
+            "PATH should be injected"
+        );
+        assert_eq!(
+            env.get("FOO"),
+            Some(&"bar".to_string()),
+            "Existing vars should be preserved"
+        );
+    }
+
+    #[test]
+    fn test_inject_shell_path_respects_existing_path() {
+        let mut env = HashMap::new();
+        env.insert("PATH".to_string(), "/custom/path".to_string());
+
+        let path = OsString::from("/usr/bin:/usr/local/bin");
+        inject_shell_path(&mut env, Some(&path));
+
+        assert_eq!(
+            env.get("PATH"),
+            Some(&"/custom/path".to_string()),
+            "User-set PATH should not be overridden"
+        );
+    }
+
+    #[test]
+    fn test_inject_shell_path_noop_when_none() {
+        let mut env = HashMap::new();
+        env.insert("FOO".to_string(), "bar".to_string());
+
+        inject_shell_path(&mut env, None);
+
+        assert!(
+            !env.contains_key("PATH"),
+            "Should not inject PATH when shell_path is None"
+        );
+    }
+
+    #[test]
+    fn test_inject_shell_path_empty_env() {
+        let mut env = HashMap::new();
+
+        let path = OsString::from("/a:/b:/c");
+        inject_shell_path(&mut env, Some(&path));
+
+        assert_eq!(env.get("PATH"), Some(&"/a:/b:/c".to_string()));
+        assert_eq!(env.len(), 1, "Should only have PATH");
+    }
+
+    // ── command_hint tests ─────────────────────────────────────────
+
+    #[test]
+    fn test_command_hint_docker() {
+        assert!(command_hint("docker").contains("Docker Desktop"));
+        assert!(command_hint("/usr/local/bin/docker").contains("Docker Desktop"));
+    }
+
+    #[test]
+    fn test_command_hint_non_docker() {
+        assert_eq!(command_hint("npx"), "");
+        assert_eq!(command_hint("node"), "");
+        assert_eq!(command_hint("python"), "");
+    }
+
+    // ── classify_stderr_line tests ─────────────────────────────────
+
+    #[test]
+    fn test_classify_stderr_error() {
+        assert_eq!(
+            classify_stderr_line("ERROR: something failed"),
+            LogLevel::Error
+        );
+        assert_eq!(
+            classify_stderr_line("fatal: not a git repository"),
+            LogLevel::Error
+        );
+        assert_eq!(
+            classify_stderr_line("thread 'main' panicked"),
+            LogLevel::Error
+        );
+    }
+
+    #[test]
+    fn test_classify_stderr_warn() {
+        assert_eq!(
+            classify_stderr_line("WARN: deprecated feature"),
+            LogLevel::Warn
+        );
+        assert_eq!(
+            classify_stderr_line("Warning: something is off"),
+            LogLevel::Warn
+        );
+    }
+
+    #[test]
+    fn test_classify_stderr_debug() {
+        assert_eq!(
+            classify_stderr_line("DEBUG: internal state"),
+            LogLevel::Debug
+        );
+        assert_eq!(
+            classify_stderr_line("trace: verbose output"),
+            LogLevel::Debug
+        );
+    }
+
+    #[test]
+    fn test_classify_stderr_info_default() {
+        assert_eq!(
+            classify_stderr_line("Server listening on port 3000"),
+            LogLevel::Info
+        );
+    }
+}
