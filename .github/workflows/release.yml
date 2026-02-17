@@ -88,7 +88,7 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact: macos-arm
-          - os: macos-latest
+          - os: macos-13
             target: x86_64-apple-darwin
             artifact: macos-intel
 
@@ -129,7 +129,7 @@ jobs:
       # strings as present (Some("")), so we must completely omit the env var.
       # Instead we import the cert here and only pass APPLE_SIGNING_IDENTITY.
       - name: Import Apple certificate
-        if: matrix.os == 'macos-latest' || matrix.os == 'macos-15'
+        if: startsWith(matrix.os, 'macos-')
         id: apple-cert
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -329,7 +329,6 @@ jobs:
             echo '  desc "Unified MCP gateway and manager for AI clients"'
             echo '  homepage "https://mcpmux.com"'
             echo ''
-            echo '  depends_on macos: ">= :high_sierra"'
             if [ "$HAS_X64" != true ]; then
               echo '  depends_on arch: :arm64'
             fi
