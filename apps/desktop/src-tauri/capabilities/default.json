@@ -16,6 +16,7 @@
     "core:window:allow-set-focus",
     "opener:default",
     "deep-link:default",
-    "updater:default"
+    "updater:default",
+    "dialog:default"
   ]
 }

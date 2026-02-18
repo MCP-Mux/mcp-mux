@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
+import { open } from '@tauri-apps/plugin-dialog';
 import {
   ChevronDown,
   ChevronRight,
@@ -17,6 +18,7 @@ import {
   Loader2,
   Clock,
   FileJson,
+  FolderOpen,
 } from 'lucide-react';
 import { ServerActionMenu } from './ServerActionMenu';
 import type { ServerViewModel, ServerDefinition, InstalledServerState, InputDefinition } from '../../types/registry';
@@ -1338,16 +1340,67 @@ export function ServersPage() {
                           className="input w-full"
                         />
                       );
-                    case 'password':
+                    case 'select':
                       return (
-                        <input
-                          type="password"
+                        <select
                           value={currentValue}
                           onChange={(e) => handleChange(e.target.value)}
-                          placeholder={input.placeholder || `Enter ${input.label.toLowerCase()}...`}
                           className="input w-full"
                           data-testid={`config-input-${input.id}`}
-                        />
+                        >
+                          <option value="">{input.placeholder || `Select ${input.label.toLowerCase()}...`}</option>
+                          {(input.options ?? []).map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      );
+                    case 'file_path':
+                      return (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={currentValue}
+                            onChange={(e) => handleChange(e.target.value)}
+                            placeholder={input.placeholder || 'Select a file...'}
+                            className="input w-full"
+                            data-testid={`config-input-${input.id}`}
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-secondary shrink-0 px-2"
+                            onClick={async () => {
+                              const selected = await open({ multiple: false });
+                              if (selected) handleChange(selected);
+                            }}
+                          >
+                            <FolderOpen className="w-4 h-4" />
+                          </button>
+                        </div>
+                      );
+                    case 'directory_path':
+                      return (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={currentValue}
+                            onChange={(e) => handleChange(e.target.value)}
+                            placeholder={input.placeholder || 'Select a directory...'}
+                            className="input w-full"
+                            data-testid={`config-input-${input.id}`}
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-secondary shrink-0 px-2"
+                            onClick={async () => {
+                              const selected = await open({ directory: true });
+                              if (selected) handleChange(selected);
+                            }}
+                          >
+                            <FolderOpen className="w-4 h-4" />
+                          </button>
+                        </div>
                       );
                     case 'text':
                     default:
