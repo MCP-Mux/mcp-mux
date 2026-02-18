@@ -11,6 +11,7 @@
 
 use std::ffi::OsString;
 use std::sync::OnceLock;
+#[cfg(unix)]
 use tracing::{debug, info, warn};
 
 /// Cached shell PATH, resolved once on first access.
