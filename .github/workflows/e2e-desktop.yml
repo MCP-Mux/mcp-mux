@@ -127,6 +127,24 @@ jobs:
             xvfb-run --auto-servernum pnpm test:e2e
           '
 
+      - name: Install matching EdgeDriver (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $edgePath = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+          if (-not (Test-Path $edgePath)) { $edgePath = "C:\Program Files\Microsoft\Edge\Application\msedge.exe" }
+          $edgeVersion = (Get-Item $edgePath).VersionInfo.ProductVersion
+          Write-Host "Edge version: $edgeVersion"
+          $driverUrl = "https://msedgewebdriverstorage.blob.core.windows.net/edgewebdriver/$edgeVersion/edgedriver_win64.zip"
+          $zipPath = "$env:TEMP\edgedriver.zip"
+          $extractDir = "$env:TEMP\edgedriver"
+          Invoke-WebRequest -Uri $driverUrl -OutFile $zipPath
+          Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
+          $driverDir = "$extractDir\edgedriver_win64"
+          if (-not (Test-Path "$driverDir\msedgedriver.exe")) { $driverDir = $extractDir }
+          Write-Host "EdgeDriver path: $driverDir"
+          echo "$driverDir" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+
       - name: Run desktop E2E tests (Windows)
         if: matrix.os == 'windows-latest'
         run: pnpm test:e2e
