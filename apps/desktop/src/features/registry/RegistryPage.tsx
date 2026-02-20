@@ -11,6 +11,7 @@ import { useRegistryStore } from '../../stores/registryStore';
 import { ServerCard } from './ServerCard';
 import { ServerDetailModal } from './ServerDetailModal';
 import { useViewSpace } from '@/stores';
+import { capture } from '@/lib/analytics';
 
 export function RegistryPage() {
   const {
@@ -89,6 +90,15 @@ export function RegistryPage() {
     }, 300);
     return () => clearTimeout(timer);
   }, [localSearch, searchQuery, search]);
+
+  // Track search analytics with longer debounce to capture final query only
+  useEffect(() => {
+    if (!localSearch.trim()) return;
+    const timer = setTimeout(() => {
+      capture('registry_search', { query: localSearch.trim() });
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [localSearch]);
 
   const handleInstall = async (id: string) => {
     const server = servers.find(s => s.id === id);
